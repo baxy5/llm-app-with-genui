@@ -64,8 +64,22 @@ class YAxis(BaseModel):
     return cleaned_type if cleaned_type in valid_types else "value"
 
 
+class AxisPointerLabel(BaseModel):
+  backgroundColor: str = Field(description="Background color for axis pointer label")
+
+
+class AxisPointer(BaseModel):
+  type: str = Field(default="cross", description="Axis pointer type")
+  label: AxisPointerLabel = Field(
+    default_factory=AxisPointerLabel, description="Label configuration for axis pointer"
+  )
+
+
 class Tooltip(BaseModel):
   trigger: str = Field(default="axis", description="Tooltip trigger type")
+  axisPointer: AxisPointer = Field(
+    default_factory=AxisPointer, description="Axis pointer configuration"
+  )
 
 
 class SeriesItem(BaseModel):

@@ -38,6 +38,7 @@ class ResearchAgent:
         "Do not provide instructions, code, or chart-generation steps. "
         "If the data is numerical (e.g., yearly revenue, growth rates, statistics), present it clearly as text or in a simple table. "
         "If exact numbers are unavailable, summarize the best available estimates with sources. "
+        "Search for up-to-date data in 2025."
         "Your final response must always be textual. "
         "If you cannot find reliable information, reply with: 'I couldn't find any information.'"
       )
