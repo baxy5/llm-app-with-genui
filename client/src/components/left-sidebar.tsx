@@ -13,7 +13,7 @@ import {
 
 const LeftSideBar = () => {
   const { leftSidebarOpen, setLeftSidebarOpen } = useSidebar();
-  const { chatSessions, sessionId, deleteChatSession } = useChat();
+  const { chatSessions, sessionId, deleteChatSession, setCot } = useChat();
   return (
     <>
       <div
@@ -47,7 +47,10 @@ const LeftSideBar = () => {
               {/* Placeholder for chat sessions list */}
               <div className="grid gap-2">
                 <Link href={`/`}>
-                  <div className="flex items-center gap-2 p-2 font-bold rounded-lg bg-secondary/50 border border-border text-xs text-black hover:bg-secondary">
+                  <div
+                    onClick={() => setCot([])}
+                    className="flex items-center gap-2 p-2 font-bold rounded-lg bg-secondary/50 border border-border text-xs text-black hover:bg-secondary"
+                  >
                     <CirclePlus size={16} />
                     Create new chat
                   </div>
