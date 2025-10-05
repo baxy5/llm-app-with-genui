@@ -28,6 +28,7 @@ class SupervisorAgent:
     2. summary - For creating final responses and content
     3. chat - Handles direct questions, requirements or just chatting that don't require other agents' collaboration
     4. line_chart - For generating eChart options for a line chart.
+    5. bar_chart - For generating eChart options for a bar chart.
     
     Current state:
     - Research data available: {bool(state.get("research_data"))}
@@ -39,7 +40,7 @@ class SupervisorAgent:
     - If the request is simple (no research or charts) → send to chat.
     - When all tasks are complete → respond with END.
     
-    Respond with ONLY the next agent name that should handle this task: researcher, summary, chat, line_chart or END.
+    Respond with ONLY the next agent name that should handle this task: researcher, summary, chat, line_chart, bar_chart or END.
     """
 
     system_message = SystemMessage(content=supervisor_prompt)

@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessageChunk, HumanMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver, RunnableConfig
 from langgraph.graph import END, StateGraph
 
+from app.agents.bar_chart_agent import BarChartAgent
 from app.agents.chat_agent import ChatAgent
 from app.agents.line_chart_agent import LineChartAgent
 from app.agents.research_agent import ResearchAgent
@@ -40,6 +41,7 @@ class MultiAgentOrchestratorService:
     self.summary_agent = SummaryAgent(env_config=env_config)
     self.chat_agent = ChatAgent(env_config=env_config)
     self.line_chart_agent = LineChartAgent(env_config=env_config)
+    self.bar_chart_agent = BarChartAgent(env_config=env_config)
 
     self.graph = self._build_multi_agent_graph()
 
@@ -52,6 +54,7 @@ class MultiAgentOrchestratorService:
     graph.add_node("summary_agent", self.summary_agent.summary)
     graph.add_node("chat_agent", self.chat_agent.chat)
     graph.add_node("line_chart_agent", self.line_chart_agent.chart)
+    graph.add_node("bar_chart_agent", self.bar_chart_agent.chart)
 
     available_agents = [
       "supervisor_agent",
@@ -59,6 +62,7 @@ class MultiAgentOrchestratorService:
       "summary_agent",
       "chat_agent",
       "line_chart_agent",
+      "bar_chart_agent",
     ]
 
     def route_to_agent(state: MultiAgentState):
@@ -66,7 +70,14 @@ class MultiAgentOrchestratorService:
 
       if current_agent == "END":
         return END
-      elif current_agent in ["supervisor", "researcher", "summary", "chat", "line_chart"]:
+      elif current_agent in [
+        "supervisor",
+        "researcher",
+        "summary",
+        "chat",
+        "line_chart",
+        "bar_chart",
+      ]:
         return current_agent
       else:
         return "supervisor"
@@ -83,6 +94,7 @@ class MultiAgentOrchestratorService:
           "summary": "summary_agent",
           "chat": "chat_agent",
           "line_chart": "line_chart_agent",
+          "bar_chart": "bar_chart_agent",
           END: END,
         },
       )
@@ -132,6 +144,8 @@ class MultiAgentOrchestratorService:
           yield 'data: {"type": "progress", "content": "Planning next step", "icon": "brain"}\n\n'
         elif event_name == "line_chart_agent":
           yield 'data: {"type": "progress", "content": "Generating line chart", "icon": "notebook"}\n\n'
+        elif event_name == "bar_chart_agent":
+          yield 'data: {"type": "progress", "content": "Generating bar chart", "icon": "notebook"}\n\n'
 
       # Handle agent completion events
       if event_type == "on_chain_end":
@@ -150,6 +164,15 @@ class MultiAgentOrchestratorService:
             payload = {"type": "content", "option": chart_data}
             yield f"data: {json.dumps(payload)}\n\n"
           yield 'data: {"type": "progress", "content": "Line chart generation completed", "icon": "check"}\n\n'
+        elif event_name == "bar_chart_agent":
+          event_data = event.get("data", {})
+          output = event_data.get("output", {})
+          if output and "messages" in output and output["messages"]:
+            chart_data = json.loads(output["messages"][0].content)
+            final_response = chart_data
+            payload = {"type": "content", "option": chart_data}
+            yield f"data: {json.dumps(payload)}\n\n"
+          yield 'data: {"type": "progress", "content": "Bar chart generation completed", "icon": "check"}\n\n'
 
       if event_type == "on_tool_start":
         tool_name = event["name"]
@@ -182,6 +205,8 @@ class MultiAgentOrchestratorService:
         elif event_metadata_node == "research_agent":
           continue
         elif event_metadata_node == "line_chart_agent":
+          continue
+        elif event_metadata_node == "bar_chart_agent":
           continue
         else:
           chunk_content = self.serialise_ai_message_chunk(event["data"]["chunk"])
