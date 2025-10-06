@@ -15,6 +15,24 @@ class Toolbox(BaseModel):
   feature: ToolboxFeature
 
 
+class Legend(BaseModel):
+  data: List[str] = Field(default_factory=list, description="Legend data labels")
+
+  @field_validator("data", mode="before")
+  @classmethod
+  def clean_data(cls, v):
+    if not v or v is None:
+      return []
+
+    # Filter out None/null values and convert to strings
+    cleaned_data = []
+    for item in v:
+      if item is not None and str(item).strip():
+        cleaned_data.append(str(item).strip())
+
+    return cleaned_data
+
+
 class XAxis(BaseModel):
   type: str = Field(default="category", description="Axis type")
   data: List[str] = Field(default_factory=list, description="Axis data")
@@ -142,6 +160,7 @@ class SeriesItem(BaseModel):
 class ChartConfig(BaseModel):
   title: Title
   toolbox: Toolbox
+  legend: Legend = Field(default_factory=Legend, description="Chart legend configuration")
   xAxis: XAxis
   yAxis: YAxis
   tooltip: Tooltip

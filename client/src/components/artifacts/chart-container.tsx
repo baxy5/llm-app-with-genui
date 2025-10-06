@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
 import * as echarts from "echarts";
 import type { ECBasicOption } from "echarts/types/dist/shared";
+import { useEffect, useRef } from "react";
 
 const ChartContainer = ({ option }: { option: ECBasicOption }) => {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -39,7 +39,7 @@ const ChartContainer = ({ option }: { option: ECBasicOption }) => {
     <div
       ref={chartRef}
       className="w-full h-64"
-      style={{ minHeight: "300px", minWidth: "350px" }}
+      style={{ minHeight: "400px", minWidth: "450px" }}
     />
   );
 };

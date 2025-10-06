@@ -60,8 +60,12 @@ class LineChartAgent:
             }
           }
         },
+        "legend": {
+          "data": ['Email', 'Union Ads', 'Video Ads', 'Direct', 'Search Engine']
+        },
         "series": [
             {
+                "name": "Email",
                 "data": [150, 230, 224, 218, 135, 147, 260],
                 "type": "line"
             }
