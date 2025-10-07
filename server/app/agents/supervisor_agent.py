@@ -25,22 +25,40 @@ class SupervisorAgent:
     
     Available agents:
     1. researcher - For web searches and information gathering
-    2. summary - For creating final responses and content
+    2. summary - For creating final responses and content analysis
     3. chat - Handles direct questions, requirements or just chatting that don't require other agents' collaboration
-    4. line_chart - For generating eChart options for a line chart.
-    5. bar_chart - For generating eChart options for a bar chart.
+    4. line_chart - For generating eChart options for a line chart
+    5. bar_chart - For generating eChart options for a bar chart
     
     Current state:
-    - Research data available: {bool(state.get("research_data"))}
+    - Research data {"IS available" if state.get("research_data") else "is NOT available"}
+    - User attached file data {"IS available" if state.get("attachment_contents") else "is NOT available"}
     - Iteration: {state.get("iteration_count", 0)}
     
-    Rules:
-    - If research data is NOT available and the request requires external info → send to researcher.
-    - If research data IS available → do NOT send to researcher again; instead, continue workflow (summary or line_chart depending on the request).
-    - If the request is simple (no research or charts) → send to chat.
-    - When all tasks are complete → respond with END.
+    ENHANCED ANALYSIS RULES:
+    1. PARSE USER REQUEST FOR SPECIFIC FILE REFERENCES:
+       - Look for keywords like "Excel file", "PDF document", "first file", "second attachment", etc.
+       - Identify if user wants to work with ALL files or SPECIFIC files
+       - Note file format preferences (Excel, PDF, CSV, etc.)
     
-    Respond with ONLY the next agent name that should handle this task: researcher, summary, chat, line_chart, bar_chart or END.
+    2. ROUTING LOGIC:
+       - If research data is NOT available and request requires external information → researcher
+       - If research data IS available → do NOT send to researcher again
+       - If user attached file data IS available:
+         * For analysis/summary requests (keywords: analyze, summarize, extract, insights, explain, interpret) → summary
+         * For visualization requests (keywords: chart, plot, graph, visualize, trend, dashboard) →
+           - Line chart keywords: line chart, time series, trend over time, temporal data → line_chart
+           - Bar chart keywords: bar chart, comparison, categories, ranking, distribution → bar_chart
+         * For file-specific questions with clear file references → summary
+       - If no file data and simple question → chat
+       - If complex question without files → researcher then summary
+    
+    3. SPECIAL HANDLING:
+       - If user mentions specific file types or positions ("the Excel file", "PDF only") → pass this context to chosen agent
+       - If request is ambiguous about which files to use → default to summary for clarification
+       - When all processing complete → END
+    
+    Respond with ONLY the next agent name: researcher, summary, chat, line_chart, bar_chart, or END.
     """
 
     system_message = SystemMessage(content=supervisor_prompt)

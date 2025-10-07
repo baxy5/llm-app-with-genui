@@ -107,6 +107,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     event: React.FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
+
     if (currentMessage.trim()) {
       const newMessageId =
         messages.length > 0
@@ -136,17 +137,56 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         ]);
 
         const url = `http://localhost:8000/agent/`;
-        const payload = {
-          input: userInput,
-          session_id: sessionId,
-        };
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+        let response: Response;
+
+        if (message.files && message.files.length > 0) {
+          const formData = new FormData();
+          formData.append("input", userInput);
+          formData.append("session_id", sessionId);
+
+          const filePromises = message.files.map(async (f) => {
+            if (f.url) {
+              try {
+                const fileBlob = await fetch(f.url).then((res) => res.blob());
+                return new File([fileBlob], f.filename as string, {
+                  type: fileBlob.type,
+                });
+              } catch (err) {
+                console.error(`Error processing file ${f.filename}:`, err);
+                return null;
+              }
+            }
+            return null;
+          });
+
+          const files = (await Promise.all(filePromises)).filter(
+            (file): file is File => file !== null
+          );
+
+          if (files.length > 0) {
+            files.forEach((file) => {
+              formData.append("files", file, file.name);
+            });
+          }
+
+          response = await fetch(url, {
+            method: "POST",
+            body: formData,
+          });
+        } else {
+          const payload = {
+            input: userInput,
+            session_id: sessionId,
+          };
+
+          response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+        }
 
         if (!response.body) {
           console.error("No response body!");

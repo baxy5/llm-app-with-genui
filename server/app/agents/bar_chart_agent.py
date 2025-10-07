@@ -21,20 +21,37 @@ class BarChartAgent:
     last_message = state["messages"][-1].content
 
     system_prompt = """
-    You are an expert data analyst and bar chart maker. 
-    Your task is to analyze the user request and the provided research data from the user, 
-    and generate a line chart configuration in JSON format.
+    You are an expert data analyst and bar chart visualization specialist.
+    Your task is to create bar charts from user's specific data requests for categorical comparisons.
     
-    Respond with ONLY a JSON object that follows the ECharts configuration format.
+    DATA SOURCE IDENTIFICATION:
+    1. ANALYZE USER REQUEST: Look for specific file or data references (e.g., "bar chart from Excel", "compare categories from PDF data")
+    2. IDENTIFY RELEVANT DATA: If user specifies a particular file type, focus ONLY on that data source
+    3. EXTRACT CATEGORICAL DATA: Look for categories/labels and their corresponding numerical values
+    4. HANDLE MULTIPLE FILES: If user doesn't specify, use the most appropriate data for bar chart visualization
     
-    Important:
-    - The title of the bar chart must be maximum 20 characters.
-    - If it's needed define different colors for each bar using the itemStyle.
+    DATA PROCESSING RULES:
+    - Prioritize categorical data (products, regions, departments, etc.) for X-axis
+    - Use numerical values for Y-axis (sales, counts, percentages, amounts)
+    - If multiple datasets available, choose based on user's explicit request
+    - When user says "chart the Excel file" - use ONLY Excel data, ignore other files
+    - Look for column headers to identify categories and values
+    - Perfect for comparisons, rankings, and distributions
+    
+    CHART REQUIREMENTS:
+    - Title: Maximum 20 characters, descriptive of the data being compared
+    - Use different colors for visual distinction when beneficial
+    - Include proper axis labels and value formatting
+    - Add tooltips for data clarity
+    - Optimize bar width for readability
+    
+    RESPONSE FORMAT:
+    Respond with ONLY a JSON object following ECharts configuration format.
     
     **Example Bar Chart Output:**
     {
         "title": {
-            "text": "Bar chart"
+            "text": "Sales by Region"
         },
         "toolbox": {
             "feature": {
@@ -49,30 +66,32 @@ class BarChartAgent:
         },
         "xAxis": {
             "type": "category",
-            "data": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            "data": ["North", "South", "East", "West", "Central"]
         },
         "yAxis": {
-            "type": "value"
+            "type": "value",
+            "name": "Sales ($K)",
+            "axisLabel": {
+                "formatter": "${value}K"
+            }
         },
         "series": [
             {
-            "name": "Beer",
+            "name": "Sales",
             "data": [
                 120,
                 {
                 "value": 200,
                 "itemStyle": {
-                    "color": "#505372"
+                    "color": "#ff6b6b"
                   }
                 },
                 150,
-                80,
-                70,
-                110,
-                130
+                180,
+                90
             ],
             "type": "bar",
-            "barWidth": "10%"
+            "barWidth": "60%"
             }
         ]
     }
@@ -85,6 +104,8 @@ class BarChartAgent:
         User request: {last_message}
         
         Research data: {state["research_data"]}
+        
+        User file attachment data: {state["attachment_contents"]}
         """
       ),
     ]

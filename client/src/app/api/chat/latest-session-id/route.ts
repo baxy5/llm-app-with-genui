@@ -1,7 +1,6 @@
 import { IChatSessionsResponse } from "@/schemas/api-responses";
 import { NextResponse } from "next/server";
 
-// TYPE
 export async function GET() {
   try {
     const backendUrl = process.env.BACKEND_URL;
@@ -28,19 +27,17 @@ export async function GET() {
     }
 
     const data: IChatSessionsResponse[] = await response.json();
+    let sessionId: number = 1;
 
     if (data.length === 0) {
-      return NextResponse.json(
-        { error: "No chat sessions found." },
-        { status: 404 }
-      );
+      return NextResponse.json({ sessionId });
     }
 
     const latestSession = data.reduce((a, b) =>
       new Date(a.created_at) > new Date(b.created_at) ? a : b
     );
 
-    const sessionId = latestSession.session_id + 1;
+    sessionId = latestSession.session_id + 1;
 
     return NextResponse.json({ sessionId });
   } catch (err) {

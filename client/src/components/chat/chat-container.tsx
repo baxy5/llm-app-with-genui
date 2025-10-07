@@ -4,11 +4,17 @@ import { useSidebar } from "@/contexts/sidebar-context";
 import { IChatMessagesResponse } from "@/schemas/api-responses";
 import { ECBasicOption } from "echarts/types/dist/shared";
 import { MenuIcon, SidebarIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Conversation, ConversationContent } from "../ai-elements/conversation";
 import { Message, MessageContent } from "../ai-elements/message";
 import {
   PromptInput,
+  PromptInputActionAddAttachments,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuTrigger,
+  PromptInputAttachment,
+  PromptInputAttachments,
   PromptInputBody,
   PromptInputSubmit,
   PromptInputTextarea,
@@ -26,6 +32,8 @@ const ChatContainer = ({
   mess?: IChatMessagesResponse[];
   slug?: string;
 }) => {
+  const [mounted, setMounted] = useState(false);
+
   const {
     leftSidebarOpen,
     setLeftSidebarOpen,
@@ -54,6 +62,10 @@ const ChatContainer = ({
       setSessionId(slug);
     }
   }, [setSessionId, slug]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
@@ -121,7 +133,10 @@ const ChatContainer = ({
         {/* Input Area */}
         <div className="p-4 border-t border-border bg-background">
           <PromptInput onSubmit={handleSubmit}>
-            <PromptInputBody className="">
+            <PromptInputBody>
+              <PromptInputAttachments>
+                {(attachment) => <PromptInputAttachment data={attachment} />}
+              </PromptInputAttachments>
               <PromptInputTextarea
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 placeholder="Type your message..."
@@ -129,7 +144,18 @@ const ChatContainer = ({
                 value={currentMessage}
               />
               <PromptInputToolbar className="p-2">
-                <PromptInputTools></PromptInputTools>
+                <PromptInputTools>
+                  {mounted && (
+                    <>
+                      <PromptInputActionMenu>
+                        <PromptInputActionMenuTrigger />
+                        <PromptInputActionMenuContent>
+                          <PromptInputActionAddAttachments />
+                        </PromptInputActionMenuContent>
+                      </PromptInputActionMenu>
+                    </>
+                  )}
+                </PromptInputTools>
                 <PromptInputSubmit
                   className="cursor-pointer"
                   aria-label="Send message"

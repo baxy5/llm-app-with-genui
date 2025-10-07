@@ -21,19 +21,35 @@ class LineChartAgent:
     last_message = state["messages"][-1].content
 
     system_prompt = """
-    You are an expert data analyst and line chart maker. 
-    Your task is to analyze the user request and the provided research data from the user, 
-    and generate a line chart configuration in JSON format.
+    You are an expert data analyst and line chart visualization specialist.
+    Your task is to create line charts from user's specific data requests.
     
-    Respond with ONLY a JSON object that follows the ECharts configuration format.
+    DATA SOURCE IDENTIFICATION:
+    1. ANALYZE USER REQUEST: Look for specific file or data references (e.g., "chart the Excel data", "visualize the revenue from the PDF")
+    2. IDENTIFY RELEVANT DATA: If user specifies a particular file type, focus ONLY on that data source
+    3. EXTRACT TIME-SERIES DATA: Look for date/time columns and corresponding numerical values
+    4. HANDLE MULTIPLE FILES: If user doesn't specify, use the most appropriate data for line chart visualization
     
-    Important:
-    - The title of the line chart must be maximum 20 characters.
+    DATA PROCESSING RULES:
+    - Prioritize time-series data (dates, months, years, quarters) for X-axis
+    - Use numerical values for Y-axis (revenue, sales, counts, percentages)
+    - If multiple datasets available, choose based on user's explicit request
+    - When user says "chart the Excel file" - use ONLY Excel data, ignore other files
+    - Look for column headers to identify appropriate data series
+    
+    CHART REQUIREMENTS:
+    - Title: Maximum 20 characters, descriptive of the data being visualized
+    - Include proper axis labels and formatting
+    - Add tooltips and legends for clarity
+    - Use appropriate value formatting (currency, percentages, etc.)
+    
+    RESPONSE FORMAT:
+    Respond with ONLY a JSON object following ECharts configuration format.
     
     **Example Line Chart Output:**
     {
         "title": {
-            "text": "Line chart"
+            "text": "Revenue Trend"
         },
         "toolbox": {
             "feature": {
@@ -42,32 +58,33 @@ class LineChartAgent:
         },
         "xAxis": {
             "type": "category",
-            "data": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            "data": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
         },
         "yAxis": {
             "type": "value",
-            "name": "Revenue (in billions USD)",
+            "name": "Revenue ($)",
             "axisLabel": {
-              "formatter": "{value} B"
+              "formatter": "${value}K"
           }
         },
         "tooltip": {
           "trigger": "axis",
           "axisPointer": {
-            "type": 'cross',
+            "type": "cross",
             "label": {
-              backgroundColor: '#6a7985'
+              "backgroundColor": "#6a7985"
             }
           }
         },
         "legend": {
-          "data": ['Email', 'Union Ads', 'Video Ads', 'Direct', 'Search Engine']
+          "data": ["Revenue"]
         },
         "series": [
             {
-                "name": "Email",
-                "data": [150, 230, 224, 218, 135, 147, 260],
-                "type": "line"
+                "name": "Revenue",
+                "data": [150, 230, 224, 218, 135, 147],
+                "type": "line",
+                "smooth": true
             }
         ]
     }
@@ -80,6 +97,8 @@ class LineChartAgent:
       User request: {last_message}
       
       Research data: {state["research_data"]}
+      
+      User file attachment data: {state["attachment_contents"]}
       """
       ),
     ]

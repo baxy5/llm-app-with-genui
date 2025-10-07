@@ -17,6 +17,7 @@ from app.api.endpoints.chat_sessions import get_db_session
 from app.models.state_model import MultiAgentRequest, MultiAgentState
 from app.services.chat_session_service import ChatSessionService
 from app.services.env_config_service import EnvConfigService, get_env_configs
+from app.services.file_service import FileService, get_file_service_db_session
 
 
 def get_checkpointer(req: Request) -> BaseCheckpointSaver:
@@ -31,10 +32,12 @@ class MultiAgentOrchestratorService:
     env_config: Annotated[EnvConfigService, Depends(get_env_configs)],
     checkpointer: Annotated[BaseCheckpointSaver, Depends(get_checkpointer)],
     cs_service: Annotated[ChatSessionService, Depends(get_db_session)],
+    file_service: Annotated[FileService, Depends(get_file_service_db_session)],
   ):
     self.env_config = env_config
     self.checkpointer = checkpointer
     self.cs_service = cs_service
+    self.file_service = file_service
 
     self.supervisor_agent = SupervisorAgent(env_config=env_config)
     self.research_agent = ResearchAgent(env_config=env_config)
@@ -118,9 +121,16 @@ class MultiAgentOrchestratorService:
 
     config = RunnableConfig(configurable={"thread_id": req.session_id})
 
+    # Return files' content if provided
+    try:
+      content = await self.file_service.retrieve_content_by_session_id(int(req.session_id))
+    except Exception:
+      content = None
+
     initial_state = {
       "research_data": "",
       "iteration_count": 0,
+      "attachment_contents": content,
       "messages": [HumanMessage(content=req.input)],
     }
 

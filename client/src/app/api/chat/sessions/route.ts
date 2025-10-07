@@ -29,10 +29,8 @@ export async function GET() {
     const data: IChatSessionsResponse[] = await response.json();
 
     if (data.length === 0) {
-      return NextResponse.json(
-        { error: "No chat sessions found." },
-        { status: 404 }
-      );
+      const emptyData: IChatSessionsResponse[] = [];
+      return NextResponse.json({ emptyData });
     }
 
     return NextResponse.json({ data });
