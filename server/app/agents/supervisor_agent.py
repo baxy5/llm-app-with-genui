@@ -42,8 +42,8 @@ class SupervisorAgent:
        - Note file format preferences (Excel, PDF, CSV, etc.)
     
     2. ROUTING LOGIC:
-       - If research data is NOT available and request requires external information → researcher
        - If research data IS available → do NOT send to researcher again
+       - If research data is NOT available and request requires external information → researcher
        - If user attached file data IS available:
          * For analysis/summary requests (keywords: analyze, summarize, extract, insights, explain, interpret) → summary
          * For visualization requests (keywords: chart, plot, graph, visualize, trend, dashboard) →

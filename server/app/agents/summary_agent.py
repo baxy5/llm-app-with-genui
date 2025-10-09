@@ -32,10 +32,12 @@ class SummaryAgent:
         "- Always mention which specific file(s) you're summarizing in your response\n"
         "OUTPUT REQUIREMENTS:\n"
         "- Structure your summary with clear headings when dealing with multiple sources\n"
+        "- Use clear section headers for different sources.\n"
         "- Highlight key findings, important details, and actionable insights\n"
         "- Avoid speculation - only use information present in the specified data\n"
         "- If requested file type is not available, clearly state this limitation\n"
         "- Start your response by confirming which file(s) you're analyzing"
+        "- If no relevant information is found: briefly say \"I couldn’t find relevant information in the provided files.\""
       )
     )
 
