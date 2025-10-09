@@ -1,10 +1,17 @@
 import hashlib
-from io import BytesIO
+import json
+import os
+import tempfile
 from typing import List
 
-import pandas as pd
-import PyPDF2
 from fastapi import Depends, HTTPException, UploadFile
+from langchain_community.document_loaders import (
+  CSVLoader,
+  Docx2txtLoader,
+  JSONLoader,
+  PyPDFLoader,
+  UnstructuredExcelLoader,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -34,7 +41,7 @@ class FileService:
         if existing_file:
           continue
 
-        extracted_text = await self._extract_text(content, file.content_type)
+        extracted_text = await self._extract_text(content, file.content_type, file.filename)
 
         file_record = FileRecord(
           session_id=session_id,
@@ -74,69 +81,78 @@ class FileService:
         detail=f"Couldn't retrieve content from db by session_id:{session_id}, {e}",
       )
 
-  async def _extract_text(self, content: bytes, content_type: str):
+  async def _extract_text(self, content: bytes, content_type: str, filename: str = None):
     if not content_type:
       return None
 
     try:
-      if content_type == "application/pdf":
-        return self._extract_pdf_text(content)
-      elif content_type in [
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel",
-      ]:
-        return self._extract_xlsx_text(content)
-      # TODO: Implement these file supports
-      elif content_type == "application/json":
-        return None
-      elif content_type == "text/csv":
-        return None
-      elif content_type in [
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/msword",
-      ]:
-        return None
-      else:
-        raise HTTPException(
-          status_code=500, detail=f"Failed to parse file with content_type: {content_type}"
+      # Create temporary file for LangChain loaders
+      with tempfile.NamedTemporaryFile(
+        delete=False, suffix=self._get_file_extension(content_type, filename)
+      ) as temp_file:
+        temp_file.write(content)
+        temp_file_path = temp_file.name
+
+      try:
+        if content_type == "application/pdf":
+          loader = PyPDFLoader(temp_file_path)
+        elif content_type in [
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel",
+        ]:
+          loader = UnstructuredExcelLoader(temp_file_path)
+        elif content_type == "application/json":
+          loader = JSONLoader(temp_file_path, jq_schema=".", text_content=False)
+        elif content_type == "text/csv":
+          loader = CSVLoader(temp_file_path)
+        elif content_type in [
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/msword",
+        ]:
+          loader = Docx2txtLoader(temp_file_path)
+        else:
+          raise HTTPException(status_code=400, detail=f"Unsupported file type: {content_type}")
+
+        # Load and extract text
+        documents = loader.load()
+        extracted_text = "\n\n".join(
+          [self._extract_page_content(doc.page_content) for doc in documents]
         )
 
+        return extracted_text
+
+      finally:
+        # Clean up temporary file
+        os.unlink(temp_file_path)
+
     except Exception as e:
+      print(f"Failed to extract content: {e}")
       raise HTTPException(status_code=500, detail=f"Failed to extract content from file: {e}")
 
-  def _extract_pdf_text(self, content: bytes) -> str:
-    try:
-      pdf_file = BytesIO(content)
-      pdf_reader = PyPDF2.PdfReader(pdf_file)
+  def _get_file_extension(self, content_type: str, filename: str = None) -> str:
+    if filename and "." in filename:
+      return "." + filename.split(".")[-1]
 
-      text_content = []
-      for page in pdf_reader.pages:
-        text_content.append(page.extract_text())
+    extension_map = {
+      "application/pdf": ".pdf",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+      "application/vnd.ms-excel": ".xls",
+      "text/csv": ".csv",
+      "application/json": ".json",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+      "application/msword": ".doc",
+    }
+    return extension_map.get(content_type, ".tmp")
 
-      return "\n\n".join(text_content)
-
-    except Exception as e:
-      raise HTTPException(status_code=500, detail=f"Failed to extract text from PDF: {e}")
-
-  def _extract_xlsx_text(self, content: bytes) -> str:
-    try:
-      excel_file = BytesIO(content)
-
-      excel_data = pd.read_excel(excel_file, sheet_name=None, engine="openpyxl")
-
-      text_content = []
-      for sheet_name, df in excel_data.items():
-        text_content.append(f"Sheet: {sheet_name}")
-        text_content.append("=" * (len(sheet_name) + 7))
-
-        df_filled = df.fillna("")
-        text_content.append(df_filled.to_string(index=False))
-        text_content.append("")
-
-      return "\n".join(text_content)
-
-    except Exception as e:
-      raise HTTPException(status_code=500, detail=f"Failed to extract text from Excel file: {e}")
+  def _extract_page_content(self, page_content) -> str:
+    """Extract string content from page_content, handling both string and dict types"""
+    if isinstance(page_content, str):
+      return page_content
+    elif isinstance(page_content, dict):
+      return json.dumps(page_content, indent=2)
+    else:
+      # Convert other types to string
+      return str(page_content)
 
 
 def get_file_service_db_session(db: Session = Depends(get_db)) -> FileService:
