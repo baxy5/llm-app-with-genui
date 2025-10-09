@@ -6,7 +6,7 @@ export default async function Home() {
 
   return (
     <>
-      <ChatContainer mess={[]} slug={sessionId.toString()} />
+      <ChatContainer mess={[]} slug={sessionId?.toString()} />
     </>
   );
 }
