@@ -4,7 +4,7 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from app.models.chat_session import ChatSession, FileRecord, Message  # noqa: F401
-from app.services.database import Base, connection_string
+from app.db.database import Base, connection_string
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

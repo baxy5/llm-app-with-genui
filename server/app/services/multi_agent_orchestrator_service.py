@@ -14,9 +14,9 @@ from app.agents.line_chart_agent import LineChartAgent
 from app.agents.research_agent import ResearchAgent
 from app.agents.summary_agent import SummaryAgent
 from app.agents.supervisor_agent import SupervisorAgent
+from app.db.database import get_db
 from app.models.state_model import MultiAgentRequest, MultiAgentState
 from app.services.chat_session_service import ChatSessionService
-from app.services.database import get_db
 from app.services.env_config_service import EnvConfigService, get_env_configs
 from app.services.file_service import FileService, get_file_service_db_session
 

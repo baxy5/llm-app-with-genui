@@ -15,8 +15,8 @@ from langchain_community.document_loaders import (
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.database import get_db
 from app.models.chat_session import FileRecord
-from app.services.database import get_db
 
 
 class FileService:
