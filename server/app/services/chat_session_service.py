@@ -1,16 +1,17 @@
 from typing import Optional
 
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models.chat_session import ChatSession, Message
-from app.services.database import get_db
 
 
 class ChatSessionService:
-  def __init__(self, db: Session):
+  def __init__(self, db: Session, checkpointer: BaseCheckpointSaver):
     self.session = db
+    self.checkpointer = checkpointer
 
   def lifecheck(self):
     return {"status": "alive", "database": "connected"}
@@ -107,7 +108,9 @@ class ChatSessionService:
     try:
       stmt = select(ChatSession).where(ChatSession.session_id == session_id)
       chat_session = self.session.scalars(stmt).first()
+
       if chat_session:
+        await self.checkpointer.adelete_thread(session_id)
         self.session.delete(chat_session)
         self.session.commit()
     except Exception as e:
@@ -121,7 +124,3 @@ class ChatSessionService:
     except Exception as e:
       self.session.rollback()
       raise HTTPException(status_code=500, detail=f"Resetting database have failed. {e}")
-
-
-def get_db_session(db: Session = Depends(get_db)) -> ChatSessionService:
-  return ChatSessionService(db)

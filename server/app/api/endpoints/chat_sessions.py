@@ -2,7 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.services.chat_session_service import ChatSessionService, get_db_session
+from app.services.chat_session_service import ChatSessionService
+from app.services.multi_agent_orchestrator_service import get_db_session
 
 router = APIRouter()
 

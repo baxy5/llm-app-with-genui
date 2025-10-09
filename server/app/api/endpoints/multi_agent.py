@@ -4,9 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.models.state_model import MultiAgentRequest
-from app.services.chat_session_service import ChatSessionService, get_db_session
+from app.services.chat_session_service import ChatSessionService
 from app.services.file_service import FileService, get_file_service_db_session
-from app.services.multi_agent_orchestrator_service import MultiAgentOrchestratorService
+from app.services.multi_agent_orchestrator_service import (
+  MultiAgentOrchestratorService,
+  get_db_session,
+)
 
 router = APIRouter()
 

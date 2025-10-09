@@ -6,6 +6,7 @@ from fastapi import Depends, Request
 from langchain_core.messages import AIMessageChunk, HumanMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver, RunnableConfig
 from langgraph.graph import END, StateGraph
+from requests import Session
 
 from app.agents.bar_chart_agent import BarChartAgent
 from app.agents.chat_agent import ChatAgent
@@ -13,15 +14,21 @@ from app.agents.line_chart_agent import LineChartAgent
 from app.agents.research_agent import ResearchAgent
 from app.agents.summary_agent import SummaryAgent
 from app.agents.supervisor_agent import SupervisorAgent
-from app.api.endpoints.chat_sessions import get_db_session
 from app.models.state_model import MultiAgentRequest, MultiAgentState
 from app.services.chat_session_service import ChatSessionService
+from app.services.database import get_db
 from app.services.env_config_service import EnvConfigService, get_env_configs
 from app.services.file_service import FileService, get_file_service_db_session
 
 
 def get_checkpointer(req: Request) -> BaseCheckpointSaver:
   return req.app.state.checkpointer
+
+
+def get_db_session(
+  db: Session = Depends(get_db), checkpointer: BaseCheckpointSaver = Depends(get_checkpointer)
+) -> ChatSessionService:
+  return ChatSessionService(db, checkpointer)
 
 
 class MultiAgentOrchestratorService:
