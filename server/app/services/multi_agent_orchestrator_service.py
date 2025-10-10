@@ -6,17 +6,19 @@ from fastapi import Depends, Request
 from langchain_core.messages import AIMessageChunk, HumanMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver, RunnableConfig
 from langgraph.graph import END, StateGraph
-from requests import Session
+from sqlalchemy.orm import Session
 
 from app.agents.bar_chart_agent import BarChartAgent
 from app.agents.chat_agent import ChatAgent
 from app.agents.line_chart_agent import LineChartAgent
 from app.agents.research_agent import ResearchAgent
+from app.agents.sql_query_agent import SqlQueryAgent
 from app.agents.summary_agent import SummaryAgent
 from app.agents.supervisor_agent import SupervisorAgent
 from app.db.database import get_db
 from app.models.state_model import MultiAgentRequest, MultiAgentState
 from app.services.chat_session_service import ChatSessionService
+from app.services.dataset_service import DatasetService
 from app.services.env_config_service import EnvConfigService, get_env_configs
 from app.services.file_service import FileService, get_file_service_db_session
 
@@ -40,18 +42,22 @@ class MultiAgentOrchestratorService:
     checkpointer: Annotated[BaseCheckpointSaver, Depends(get_checkpointer)],
     cs_service: Annotated[ChatSessionService, Depends(get_db_session)],
     file_service: Annotated[FileService, Depends(get_file_service_db_session)],
+    db: Session = Depends(get_db),
   ):
     self.env_config = env_config
     self.checkpointer = checkpointer
     self.cs_service = cs_service
     self.file_service = file_service
 
-    self.supervisor_agent = SupervisorAgent(env_config=env_config)
+    dataset_service = DatasetService(db)
+
+    self.supervisor_agent = SupervisorAgent(env_config=env_config, dataset_service=dataset_service)
     self.research_agent = ResearchAgent(env_config=env_config)
     self.summary_agent = SummaryAgent(env_config=env_config)
     self.chat_agent = ChatAgent(env_config=env_config)
     self.line_chart_agent = LineChartAgent(env_config=env_config)
     self.bar_chart_agent = BarChartAgent(env_config=env_config)
+    self.query_agent = SqlQueryAgent(env_config=env_config)
 
     self.graph = self._build_multi_agent_graph()
 
@@ -65,6 +71,7 @@ class MultiAgentOrchestratorService:
     graph.add_node("chat_agent", self.chat_agent.chat)
     graph.add_node("line_chart_agent", self.line_chart_agent.chart)
     graph.add_node("bar_chart_agent", self.bar_chart_agent.chart)
+    graph.add_node("query_agent", self.query_agent.generate)
 
     available_agents = [
       "supervisor_agent",
@@ -73,6 +80,7 @@ class MultiAgentOrchestratorService:
       "chat_agent",
       "line_chart_agent",
       "bar_chart_agent",
+      "query_agent",
     ]
 
     def route_to_agent(state: MultiAgentState):
@@ -87,6 +95,7 @@ class MultiAgentOrchestratorService:
         "chat",
         "line_chart",
         "bar_chart",
+        "query",
       ]:
         return current_agent
       else:
@@ -105,6 +114,7 @@ class MultiAgentOrchestratorService:
           "chat": "chat_agent",
           "line_chart": "line_chart_agent",
           "bar_chart": "bar_chart_agent",
+          "query": "query_agent",
           END: END,
         },
       )
@@ -136,6 +146,8 @@ class MultiAgentOrchestratorService:
 
     initial_state = {
       "research_data": "",
+      "database_query": None,
+      "database_data": None,
       "iteration_count": 0,
       "attachment_contents": content,
       "messages": [HumanMessage(content=req.input)],
@@ -224,6 +236,8 @@ class MultiAgentOrchestratorService:
         elif event_metadata_node == "line_chart_agent":
           continue
         elif event_metadata_node == "bar_chart_agent":
+          continue
+        elif event_metadata_node == "query_agent":
           continue
         else:
           chunk_content = self.serialise_ai_message_chunk(event["data"]["chunk"])
