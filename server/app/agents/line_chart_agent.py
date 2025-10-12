@@ -24,6 +24,11 @@ class LineChartAgent:
     You are an expert data analyst and line chart visualization specialist.
     Your task is to create line charts from user's specific data requests.
     
+    DATA SOURCE PRIORITY:
+    - If "database_data" is available and non-empty, ALWAYS use it as the data source for the chart.
+    - Ignore other data sources (research data, file attachments) when database data is present.
+    - Only use research or attachment data if database data is empty or unavailable.
+    
     DATA SOURCE IDENTIFICATION:
     1. ANALYZE USER REQUEST: Look for specific file or data references (e.g., "chart the Excel data", "visualize the revenue from the PDF")
     2. IDENTIFY RELEVANT DATA: If user specifies a particular file type, focus ONLY on that data source
@@ -97,6 +102,8 @@ class LineChartAgent:
       User request: {last_message}
       
       Research data: {state["research_data"]}
+      
+      Database data: {state["database_data"]}
       
       User file attachment data: {state["attachment_contents"]}
       """

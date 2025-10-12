@@ -24,6 +24,11 @@ class BarChartAgent:
     You are an expert data analyst and bar chart visualization specialist.
     Your task is to create bar charts from user's specific data requests for categorical comparisons.
     
+    DATA SOURCE PRIORITY:
+    - If "database_data" is available and non-empty, ALWAYS use it as the data source for the chart.
+    - Ignore other data sources (research data, file attachments) when database data is present.
+    - Only use research or attachment data if database data is empty or unavailable.
+    
     DATA SOURCE IDENTIFICATION:
     1. ANALYZE USER REQUEST: Look for specific file or data references (e.g., "bar chart from Excel", "compare categories from PDF data")
     2. IDENTIFY RELEVANT DATA: If user specifies a particular file type, focus ONLY on that data source
@@ -97,6 +102,8 @@ class BarChartAgent:
     }
     """
 
+    print("Bar chart db: ", state["database_data"])
+
     bar_chart_messages = [
       SystemMessage(content=system_prompt),
       HumanMessage(
@@ -104,6 +111,8 @@ class BarChartAgent:
         User request: {last_message}
         
         Research data: {state["research_data"]}
+        
+        Database data: {state["database_data"]}
         
         User file attachment data: {state["attachment_contents"]}
         """
@@ -119,6 +128,8 @@ class BarChartAgent:
         validated_dict = validated_response.model_dump()
 
         chart_message = AIMessage(content=json.dumps(validated_dict))
+
+        print("Bar chart res: ", chart_message)
 
         return {"messages": [chart_message], "current_agent": "END"}
       except Exception as e:

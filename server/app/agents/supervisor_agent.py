@@ -19,14 +19,13 @@ class SupervisorAgent:
   async def supervise(self, state: MultiAgentState):
     messages = state["messages"]
     last_message = messages[-1]
+    database_data = []
 
     database_query = state.get("database_query")
     if database_query and database_query != "False" and self.dataset_service:
-      print(f"Database query: {database_query}")
       try:
         data = self.dataset_service.run_sql_query(database_query)
-        state["database_data"] = data
-        print(f"Database data: {state['database_data']}")
+        database_data = data
       except Exception as e:
         print(f"Error executing database query: {e}")
     else:
@@ -34,6 +33,8 @@ class SupervisorAgent:
 
     if not last_message:
       return {"current_agent": "supervisor"}
+
+    print("Database data super: ", database_data)
 
     supervisor_prompt = f"""
     You are a supervisor agent managing a multi-agent system. 
@@ -66,7 +67,11 @@ class SupervisorAgent:
         or asks for specific data retrieval or filtering (e.g., "get", "show", "fetch", "list", "count", "find") → route to **query** unless if the "Database data" is AVAILABLE.
       - If research data IS available → do NOT send to researcher again.
       - If research data is NOT available and request requires external information → researcher.
-      - If database data IS available → do NOT send to query agent again (unless a new query is requested).
+      - If the "Database data" IS available:
+        * If the user mentioned visualization (keywords: chart, plot, trend, graph, bar, line) → send to appropriate chart agent.
+        * If the user mentioned analysis, summary, explanation, or interpretation → send to summary.
+        * If the user's previous request was only to fetch data and it is now available → send to summary for presenting results.
+        * Do NOT send to query again unless the user explicitly asks for a new or modified query.
       - If user attached file data IS available:
         * For analysis/summary requests (keywords: analyze, summarize, extract, insights, explain, interpret) → summary.
         * For visualization requests (keywords: chart, plot, graph, visualize, trend, dashboard):
@@ -98,5 +103,6 @@ class SupervisorAgent:
 
     return {
       "current_agent": next_agent,
+      "database_data": database_data,
       "iteration_count": state.get("iteration_count", 0) + 1,
     }
