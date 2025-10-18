@@ -29,6 +29,7 @@ class SupervisorAgent:
     3. chat - Handles direct questions, requirements or just chatting that don't require other agents' collaboration
     4. line_chart - For generating eChart options for a line chart
     5. bar_chart - For generating eChart options for a bar chart
+    6. component_supervisor - For supervising the building process of component generation
     
     Current state:
     - Research data {"IS available" if state.get("research_data") else "is NOT available"}
@@ -36,10 +37,12 @@ class SupervisorAgent:
     - Iteration: {state.get("iteration_count", 0)}
     
     ENHANCED ANALYSIS RULES:
-    1. PARSE USER REQUEST FOR SPECIFIC FILE REFERENCES:
+    1. PARSE USER REQUEST FOR SPECIFIC CONTEXT:
        - Look for keywords like "Excel file", "PDF document", "first file", "second attachment", etc.
        - Identify if user wants to work with ALL files or SPECIFIC files
        - Note file format preferences (Excel, PDF, CSV, etc.)
+       - Identify whether user wants to analyze, summarize, or visualize file data.
+       - Identify mentions of UI elements or components (e.g. "table", "card", "button", "form", "navbar", "modal", "section", "layout", "component").
     
     2. ROUTING LOGIC:
        - If research data IS available → do NOT send to researcher again
@@ -51,6 +54,7 @@ class SupervisorAgent:
            - Bar chart keywords: bar chart, comparison, categories, ranking, distribution → bar_chart
          * For file-specific questions with clear file references → summary
        - If no file data and simple question → chat
+       - If the request contains component-related keywords such as: ["component", "card", "table", "section", "layout", "UI", "dashboard"] → component_supervisor
        - If complex question without files → researcher then summary
     
     3. SPECIAL HANDLING:
@@ -58,7 +62,7 @@ class SupervisorAgent:
        - If request is ambiguous about which files to use → default to summary for clarification
        - When all processing complete → END
     
-    Respond with ONLY the next agent name: researcher, summary, chat, line_chart, bar_chart, or END.
+    Respond with ONLY the next agent name: researcher, summary, chat, line_chart, bar_chart, component_supervisor or END.
     """
 
     system_message = SystemMessage(content=supervisor_prompt)

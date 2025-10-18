@@ -19,6 +19,12 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
     ],
+    plugins: {
+      "@typescript-eslint": typescriptEslint,
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+    },
   },
 ];
 

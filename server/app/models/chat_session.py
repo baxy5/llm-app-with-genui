@@ -36,6 +36,7 @@ class Message(Base):
   type = Column(Enum(TypeEnum), nullable=False)
   content = Column(String, nullable=True)
   option = Column(JSON, nullable=True)
+  component = Column(JSON, nullable=True)
 
   session = relationship("ChatSession", back_populates="messages")
 

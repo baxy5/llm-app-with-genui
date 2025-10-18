@@ -2,15 +2,21 @@
 
 import { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { deleteChatSessionById, getChatSessions } from "@/lib/data";
+import { createFormDataWithFiles, streamParser } from "@/lib/utils";
 import {
   IChatMessagesResponse,
   IChatSessionsResponse,
 } from "@/schemas/api-responses";
 import { IThinkingType } from "@/schemas/chat-types";
 import {
+  Blocks,
   Brain,
+  ChartBar,
+  ChartLine,
   CircleCheckBig,
+  Hammer,
   NotebookPen,
+  Pencil,
   SearchIcon,
   TextSearch,
 } from "lucide-react";
@@ -140,34 +146,11 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         let response: Response;
 
         if (message.files && message.files.length > 0) {
-          const formData = new FormData();
-          formData.append("input", userInput);
-          formData.append("session_id", sessionId);
-
-          const filePromises = message.files.map(async (f) => {
-            if (f.url) {
-              try {
-                const fileBlob = await fetch(f.url).then((res) => res.blob());
-                return new File([fileBlob], f.filename as string, {
-                  type: fileBlob.type,
-                });
-              } catch (err) {
-                console.error(`Error processing file ${f.filename}:`, err);
-                return null;
-              }
-            }
-            return null;
-          });
-
-          const files = (await Promise.all(filePromises)).filter(
-            (file): file is File => file !== null
+          const formData = await createFormDataWithFiles(
+            userInput,
+            sessionId,
+            message
           );
-
-          if (files.length > 0) {
-            files.forEach((file) => {
-              formData.append("files", file, file.name);
-            });
-          }
 
           response = await fetch(url, {
             method: "POST",
@@ -193,9 +176,6 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           return;
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
         let streamedContent = "";
         const iconMap = {
           text_search: TextSearch,
@@ -203,76 +183,72 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           notebook: NotebookPen,
           check: CircleCheckBig,
           brain: Brain,
+          pencil: Pencil,
+          line_chart: ChartLine,
+          bar_chart: ChartBar,
+          hammer: Hammer,
+          blocks: Blocks,
         };
 
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          const events = buffer.split("\n\n");
-
-          buffer = events.pop() ?? "";
-
-          for (const rawEvent of events) {
-            if (!rawEvent.startsWith("data:")) continue;
-
-            const jsonString = rawEvent.replace(/^data:\s*/, "");
-            try {
-              const parsed = JSON.parse(jsonString);
-              if (parsed.type === "content") {
-                // Handle text content
-                if (parsed.content) {
-                  streamedContent += parsed.content;
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === aiResponseId
-                        ? {
-                            ...msg,
-                            type: "assistant",
-                            content: streamedContent,
-                          }
-                        : msg
-                    )
-                  );
-                }
-
-                // Handle chart option data
-                if (parsed.option) {
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === aiResponseId
-                        ? {
-                            ...msg,
-                            type: "assistant",
-                            content: "",
-                            option: parsed.option,
-                          }
-                        : msg
-                    )
-                  );
-                }
-              } else {
-                setCot((prev) => [
-                  ...prev,
-                  {
-                    content: parsed.content,
-                    search_query: parsed.search_query
-                      ? parsed.search_query
-                      : "",
-                    icon:
-                      iconMap[parsed.icon as keyof typeof iconMap] ||
-                      NotebookPen,
-                  },
-                ]);
-              }
-            } catch (err) {
-              console.error("Failed to parse SSE event:", jsonString, err);
+        await streamParser(response, (parsed: any) => {
+          if (parsed.type === "content") {
+            // Handle text content
+            if (parsed.content) {
+              streamedContent += parsed.content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === aiResponseId
+                    ? {
+                        ...msg,
+                        type: "assistant",
+                        content: streamedContent,
+                      }
+                    : msg
+                )
+              );
             }
+
+            // Handle chart option data
+            if (parsed.option) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === aiResponseId
+                    ? {
+                        ...msg,
+                        type: "assistant",
+                        option: parsed.option,
+                      }
+                    : msg
+                )
+              );
+            }
+
+            // Handle component data
+            if (parsed.component) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === aiResponseId
+                    ? {
+                        ...msg,
+                        type: "assistant",
+                        component: parsed.component,
+                      }
+                    : msg
+                )
+              );
+            }
+          } else {
+            setCot((prev) => [
+              ...prev,
+              {
+                content: parsed.content,
+                search_query: parsed.search_query ? parsed.search_query : "",
+                icon:
+                  iconMap[parsed.icon as keyof typeof iconMap] || NotebookPen,
+              },
+            ]);
           }
-        }
+        });
       } catch (err) {
         console.error("Error parsing event data:", err);
       } finally {

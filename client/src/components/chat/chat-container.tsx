@@ -23,6 +23,7 @@ import {
 } from "../ai-elements/prompt-input";
 import { Response } from "../ai-elements/response";
 import ChartContainer from "../artifacts/chart-container";
+import DynamicRenderer from "../artifacts/DynamicRenderer";
 import { Button } from "../ui/button";
 
 const ChatContainer = ({
@@ -53,7 +54,8 @@ const ChatContainer = ({
 
   useEffect(() => {
     if (mess) {
-      setMessages(mess);
+      const sortedMessages = [...mess].sort((a, b) => a.id - b.id);
+      setMessages(sortedMessages);
     }
   }, [mess, setMessages]);
 
@@ -108,21 +110,38 @@ const ChatContainer = ({
               >
                 <MessageContent>
                   {(() => {
-                    switch (message.type) {
-                      case "assistant":
-                        return message.option ? (
+                    if (message.type === "assistant") {
+                      if (message.component) {
+                        const components = Array.isArray(message.component)
+                          ? message.component
+                          : [message.component];
+                        return (
+                          <>
+                            {components.map((ui, i) => (
+                              <DynamicRenderer
+                                key={i}
+                                descriptor={ui.component}
+                              />
+                            ))}
+                          </>
+                        );
+                      }
+                      if (message.option) {
+                        return (
                           <>
                             <Response>{message.content}</Response>
                             <ChartContainer
                               option={message.option as ECBasicOption}
                             />
                           </>
-                        ) : (
-                          <Response>{message.content}</Response>
                         );
-                      case "user":
-                        return <p>{message.content}</p>;
+                      }
+                      return <Response>{message.content}</Response>;
                     }
+                    if (message.type === "user") {
+                      return <p>{message.content}</p>;
+                    }
+                    return null;
                   })()}
                 </MessageContent>
               </Message>

@@ -83,7 +83,7 @@ class ChatSessionService:
       raise HTTPException(status_code=500, detail=f"New user message insertion failed: {e}")
 
   async def add_assistant_message(
-    self, session_id: str, option: Optional[str], content: Optional[str]
+    self, session_id: str, option: Optional[str], content: Optional[str], component: Optional[str]
   ):
     try:
       stmt = select(Message.id).where(Message.session_id == session_id).order_by(Message.id.desc())
@@ -95,11 +95,12 @@ class ChatSessionService:
         type="assistant",
         content=content,
         option=option,
+        component=component,
       )
       self.session.add(new_message)
       self.session.commit()
       self.session.refresh(new_message)  # refresh to get autoincrement ID
-      return {"session_id": session_id, "content": content, "option": option}
+      return {"session_id": session_id, "content": content, "option": option, "component": component}
     except Exception as e:
       self.session.rollback()
       raise HTTPException(status_code=500, detail=f"New assistant message insertion failed: {e}")

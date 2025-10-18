@@ -12,4 +12,5 @@ export interface IChatMessagesResponse {
   type: string;
   content?: string | null;
   option?: ECBasicOption | null;
+  component?: UIEvent | null | any;
 }

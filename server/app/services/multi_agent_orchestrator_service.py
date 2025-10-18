@@ -9,11 +9,16 @@ from langgraph.graph import END, StateGraph
 from requests import Session
 
 from app.agents.bar_chart_agent import BarChartAgent
+from app.agents.card_agent import CardAgent
 from app.agents.chat_agent import ChatAgent
+from app.agents.component_supervisor_agent import ComponentSupervisorAgent
 from app.agents.line_chart_agent import LineChartAgent
 from app.agents.research_agent import ResearchAgent
+from app.agents.section_agent import SectionAgent
 from app.agents.summary_agent import SummaryAgent
 from app.agents.supervisor_agent import SupervisorAgent
+from app.agents.table_agent import TableAgent
+from app.agents.ui_builder_agent import UiBuilderAgent
 from app.db.database import get_db
 from app.models.state_model import MultiAgentRequest, MultiAgentState
 from app.services.chat_session_service import ChatSessionService
@@ -52,6 +57,11 @@ class MultiAgentOrchestratorService:
     self.chat_agent = ChatAgent(env_config=env_config)
     self.line_chart_agent = LineChartAgent(env_config=env_config)
     self.bar_chart_agent = BarChartAgent(env_config=env_config)
+    self.component_supervisor_agent = ComponentSupervisorAgent(env_config=env_config)
+    self.section_agent = SectionAgent(env_config=env_config)
+    self.card_agent = CardAgent(env_config=env_config)
+    self.table_agent = TableAgent(env_config=env_config)
+    self.ui_builder_agent = UiBuilderAgent(env_config=env_config)
 
     self.graph = self._build_multi_agent_graph()
 
@@ -65,6 +75,11 @@ class MultiAgentOrchestratorService:
     graph.add_node("chat_agent", self.chat_agent.chat)
     graph.add_node("line_chart_agent", self.line_chart_agent.chart)
     graph.add_node("bar_chart_agent", self.bar_chart_agent.chart)
+    graph.add_node("component_supervisor_agent", self.component_supervisor_agent.supervise)
+    graph.add_node("section_agent", self.section_agent.generate)
+    graph.add_node("card_agent", self.card_agent.generate)
+    graph.add_node("table_agent", self.table_agent.generate)
+    graph.add_node("ui_builder_agent", self.ui_builder_agent.generate)
 
     available_agents = [
       "supervisor_agent",
@@ -73,6 +88,11 @@ class MultiAgentOrchestratorService:
       "chat_agent",
       "line_chart_agent",
       "bar_chart_agent",
+      "component_supervisor_agent",
+      "section_agent",
+      "card_agent",
+      "table_agent",
+      "ui_builder_agent",
     ]
 
     def route_to_agent(state: MultiAgentState):
@@ -87,6 +107,11 @@ class MultiAgentOrchestratorService:
         "chat",
         "line_chart",
         "bar_chart",
+        "component_supervisor",
+        "section",
+        "card",
+        "table",
+        "ui_builder",
       ]:
         return current_agent
       else:
@@ -105,6 +130,11 @@ class MultiAgentOrchestratorService:
           "chat": "chat_agent",
           "line_chart": "line_chart_agent",
           "bar_chart": "bar_chart_agent",
+          "component_supervisor": "component_supervisor_agent",
+          "section": "section_agent",
+          "card": "card_agent",
+          "table": "table_agent",
+          "ui_builder": "ui_builder_agent",
           END: END,
         },
       )
@@ -138,6 +168,13 @@ class MultiAgentOrchestratorService:
       "research_data": "",
       "iteration_count": 0,
       "attachment_contents": content,
+      "dashboard_plan": {},
+      "section_component": {},
+      "card_component": [],
+      "table_component": [],
+      "is_initial_planning": True,
+      "ui_descriptor": {},
+      "ui_descriptor_target": None,
       "messages": [HumanMessage(content=req.input)],
     }
 
@@ -154,15 +191,23 @@ class MultiAgentOrchestratorService:
         if event_name == "research_agent":
           yield 'data: {"type": "progress", "content": "Researching information", "icon": "text_search"}\n\n'
         elif event_name == "summary_agent":
-          yield 'data: {"type": "progress", "content": "Summarizing findings", "icon": "notebook"}\n\n'
+          yield 'data: {"type": "progress", "content": "Summarizing findings", "icon": "pencil"}\n\n'
         elif event_name == "chat_agent":
-          yield 'data: {"type": "progress", "content": "Generating response", "icon": "notebook"}\n\n'
+          yield 'data: {"type": "progress", "content": "Generating response", "icon": "pencil"}\n\n'
         elif event_name == "supervisor_agent":
           yield 'data: {"type": "progress", "content": "Planning next step", "icon": "brain"}\n\n'
         elif event_name == "line_chart_agent":
-          yield 'data: {"type": "progress", "content": "Generating line chart", "icon": "notebook"}\n\n'
+          yield 'data: {"type": "progress", "content": "Generating line chart", "icon": "line_chart"}\n\n'
         elif event_name == "bar_chart_agent":
-          yield 'data: {"type": "progress", "content": "Generating bar chart", "icon": "notebook"}\n\n'
+          yield 'data: {"type": "progress", "content": "Generating bar chart", "icon": "bar_chart"}\n\n'
+        elif event_name == "section_agent":
+          yield 'data: {"type": "progress", "content": "Building Section UI component", "icon": "blocks"}\n\n'
+        elif event_name == "table_agent":
+          yield 'data: {"type": "progress", "content": "Building Table UI component", "icon": "blocks"}\n\n'
+        elif event_name == "card_agent":
+          yield 'data: {"type": "progress", "content": "Building Card UI component", "icon": "blocks"}\n\n'
+        elif event_name == "ui_builder_agent":
+          yield 'data: {"type": "progress", "content": "Building final dashboard UI", "icon": "hammer"}\n\n'
 
       # Handle agent completion events
       if event_type == "on_chain_end":
@@ -172,6 +217,79 @@ class MultiAgentOrchestratorService:
           yield 'data: {"type": "progress", "content": "Summary completed", "icon": "check"}\n\n'
         elif event_name == "chat_agent":
           yield 'data: {"type": "progress", "content": "Response completed", "icon": "check"}\n\n'
+        elif event_name == "component_supervisor_agent":
+          event_data = event.get("data", {})
+          output = event_data.get("output", {})
+          next_agent = output.get("current_agent", "")
+          is_initial_planning = output.get("is_initial_planning", False)
+          target = output.get("ui_descriptor_target", "component-123")
+
+          if is_initial_planning and next_agent != "END":
+            if next_agent == "section":
+              ui_data = {
+                "type": "ui_event",
+                "target": target,
+                "component": {
+                  "id": "",
+                  "type": "section",
+                  "props": {
+                    "loading": True,
+                    "children": [],
+                  },
+                },
+              }
+              payload = {"type": "content", "component": [ui_data]}
+              yield f"data: {json.dumps(payload)}\n\n"
+            if next_agent == "card":
+              ui_data = {
+                "type": "ui_event",
+                "target": target,
+                "component": {
+                  "id": "",
+                  "type": "card",
+                  "props": {
+                    "title": "",
+                    "description": "",
+                    "value": "",
+                    "loading": True,
+                    "children": [],
+                  },
+                },
+              }
+              payload = {"type": "content", "component": [ui_data]}
+              yield f"data: {json.dumps(payload)}\n\n"
+            if next_agent == "table":
+              ui_data = {
+                "type": "ui_event",
+                "target": target,
+                "component": {
+                  "id": "",
+                  "type": "table",
+                  "props": {
+                    "loading": True,
+                    "children": [],
+                  },
+                },
+              }
+              payload = {"type": "content", "component": [ui_data]}
+              yield f"data: {json.dumps(payload)}\n\n"
+        elif event_name == "section_agent":
+          yield 'data: {"type": "progress", "content": "Section UI component crafted", "icon": "check"}\n\n'
+        elif event_name == "table_agent":
+          yield 'data: {"type": "progress", "content": "Table UI component crafted", "icon": "check"}\n\n'
+        elif event_name == "card_agent":
+          yield 'data: {"type": "progress", "content": "Card UI component crafted", "icon": "check"}\n\n'
+        # Dashboard final response
+        elif event_name == "ui_builder_agent":
+          event_data = event.get("data", {})
+          output = event_data.get("output", {})
+          if output and "messages" in output and output["messages"]:
+            ui_data = json.loads(output["messages"][0].content)
+            final_response = [ui_data]
+            payload = {"type": "content", "component": [ui_data]}
+            yield f"data: {json.dumps(payload)}\n\n"
+          yield 'data: {"type": "progress", "content": "Components crafted, dashboard assembled", "icon": "check"}\n\n'
+        # Line Chart final response
         elif event_name == "line_chart_agent":
           event_data = event.get("data", {})
           output = event_data.get("output", {})
@@ -181,6 +299,7 @@ class MultiAgentOrchestratorService:
             payload = {"type": "content", "option": chart_data}
             yield f"data: {json.dumps(payload)}\n\n"
           yield 'data: {"type": "progress", "content": "Line chart generation completed", "icon": "check"}\n\n'
+        # Bar Chart final response
         elif event_name == "bar_chart_agent":
           event_data = event.get("data", {})
           output = event_data.get("output", {})
@@ -225,6 +344,16 @@ class MultiAgentOrchestratorService:
           continue
         elif event_metadata_node == "bar_chart_agent":
           continue
+        elif event_metadata_node == "component_supervisor_agent":
+          continue
+        elif event_metadata_node == "section_agent":
+          continue
+        elif event_metadata_node == "card_agent":
+          continue
+        elif event_metadata_node == "table_agent":
+          continue
+        elif event_metadata_node == "ui_builder_agent":
+          continue
         else:
           chunk_content = self.serialise_ai_message_chunk(event["data"]["chunk"])
           final_response += chunk_content
@@ -234,11 +363,15 @@ class MultiAgentOrchestratorService:
     # Store agent response to db
     if isinstance(final_response, str):
       await self.cs_service.add_assistant_message(
-        session_id=req.session_id, content=final_response, option=None
+        session_id=req.session_id, content=final_response, option=None, component=None
+      )
+    elif isinstance(final_response, list):
+      await self.cs_service.add_assistant_message(
+        session_id=req.session_id, component=final_response, content=None, option=None
       )
     else:
       await self.cs_service.add_assistant_message(
-        session_id=req.session_id, content=None, option=final_response
+        session_id=req.session_id, content=None, option=final_response, component=None
       )
 
     yield 'data: {"type": "end"}\n\n'
