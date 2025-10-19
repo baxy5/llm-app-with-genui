@@ -1,6 +1,6 @@
 import json
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
@@ -100,6 +100,20 @@ class SectionAgent:
       response = await self.llm_with_structured_output.ainvoke(message)
 
       dict_response = response if isinstance(response, dict) else json.loads(response)
+
+      if dict_response and dict_response.get("id"):
+        ui_event = {"type": "ui_event", "target": "loading_section", "component": dict_response}
+
+        section_message = AIMessage(content=json.dumps(ui_event))
+        messages = state.get("messages", [])
+        messages.append(section_message)
+
+        return {
+          "section_component": dict_response,
+          "current_agent": "component_supervisor",
+          "messages": messages,
+          "section_ready": True,
+        }
 
       return {"section_component": dict_response, "current_agent": "component_supervisor"}
     except Exception as e:

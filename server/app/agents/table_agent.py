@@ -1,6 +1,6 @@
 import json
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
@@ -119,9 +119,26 @@ class TableAgent:
 
       dict_response = response if isinstance(response, (dict, list)) else json.loads(response)
 
+      if dict_response and dict_response.get("id"):
+        ui_event = {"type": "ui_event", "target": "loading_table", "component": dict_response}
+
+        table_message = AIMessage(content=json.dumps(ui_event))
+        messages = state.get("messages", [])
+        messages.append(table_message)
+
+        table_state = state.get("table_component", [])
+        table_state.append(dict_response)
+
+        return {
+          "table_component": table_state,
+          "current_agent": "component_supervisor",
+          "messages": messages,
+          "table_ready": True,
+        }
+
+      # Handle empty response
       table_state = state.get("table_component", [])
       table_state.append(dict_response)
-
       return {"table_component": table_state, "current_agent": "component_supervisor"}
     except Exception as e:
       print(f"An error occurred while generating table component: {e}")

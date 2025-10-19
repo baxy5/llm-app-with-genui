@@ -1,6 +1,6 @@
 import json
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
@@ -34,35 +34,37 @@ class CardAgent:
     - Do NOT generate tables, sections, charts, or UI builder artifacts.
     - If no unfulfilled card step exists, return an empty JSON object {} (do NOT invent cards).
 
-    Data usage:
-    - Each TODO step may mention data fields, aggregations, filters, or metrics.
-    - Use only information explicitly available in the step description or known context.
-    - If a numeric value is missing, set "value": "" and "loading": false (or "loading": true if the description clearly indicates missing data).
-    - Do NOT fabricate precise numbers.
-    - "trend" can be one of ["up", "down", "neutral", ""] (empty string if unknown).
+    Data handling principles:
+    - Only include properties for which reliable data or intent is explicitly mentioned.
+    - If a property's value is unknown or cannot be inferred, omit that property entirely.
+    - Never fabricate values, units, descriptions, or trends.
+    - When omitting a property, you must still return a valid JSON object following the schema, but unused or unavailable props may be excluded (e.g., exclude `delta` if no prior value is referenced).
+    - Boolean and enum fields (e.g., `loading`, `bordered`, `shadow`, `rounded`) should still be included to maintain consistent component behavior.
+    - Numeric fields without data (e.g., value, delta, progress) must NOT be guessed or approximated.
+    - The "trend" field must only be one of ["up", "down", "neutral"] if clearly mentioned, otherwise omit it.
 
-    JSON schema (STRICT):
+    JSON schema (flexible but valid):
     {
       "id": "<snake_case_card_id>",
       "type": "card",
       "props": {
         "title": "<Title or empty>",
-        "value": "<Value or empty>",
-        "description": "<Short description or empty>",
-        "trend": "up|down|neutral|",
+        "value": "<Value if known>",
+        "description": "<Short description if known>",
+        "trend": "up|down|neutral" (optional),
         "loading": false,
-        "unit": "<unit or empty>",
-        "previousValue": <number or null>,
-        "delta": <number or null>,
-        "trendColor": "<color or empty>",
+        "unit": "<unit if specified>",
+        "previousValue": <number or null> (optional),
+        "delta": <number or null> (optional),
+        "trendColor": "<color or empty>" (optional),
         "size": "sm|md|lg",
-        "bordered": true|false,
-        "shadow": true|false,
-        "rounded": true|false,
+        "bordered": true,
+        "shadow": true,
+        "rounded": true,
         "className": "<string or empty>",
-        "progress": <number 0-100 or null>,
-        "progressColor": "<color or empty>",
-        "children": [] 
+        "progress": <number 0-100> (optional),
+        "progressColor": "<color or empty>" (optional),
+        "children": []
       }
     }
 
@@ -78,12 +80,11 @@ class CardAgent:
     - NO markdown, NO commentary, STRICT JSON only.
 
     Validation constraints:
-    - Object must include: id, type="card", props.
-    - props must include all extended card props listed in the schema above.
-    - No extra top-level keys.
-    - loading must be boolean.
+    - Object must include: id, type="card", and props.
+    - props must include all standard style/configuration fields (size, bordered, shadow, rounded, className, children).
+    - Optional data fields (like delta, progress, trend, etc.) may be omitted entirely if not supported by context.
 
-    Example (fulfilled case):
+    Example (fulfilled case with available data):
     {
       "id": "total_revenue_card",
       "type": "card",
@@ -104,6 +105,22 @@ class CardAgent:
         "className": "",
         "progress": 50,
         "progressColor": "bg-blue-500",
+        "children": []
+      }
+    }
+
+    Example (partial data case):
+    {
+      "id": "open_tickets_card",
+      "type": "card",
+      "props": {
+        "title": "Open Tickets",
+        "loading": true,
+        "size": "sm",
+        "bordered": true,
+        "shadow": true,
+        "rounded": true,
+        "className": "",
         "children": []
       }
     }
@@ -132,9 +149,26 @@ class CardAgent:
 
       dict_response = response if isinstance(response, dict) else json.loads(response)
 
+      if dict_response and dict_response.get("id"):
+        ui_event = {"type": "ui_event", "target": "loading_card", "component": dict_response}
+
+        card_message = AIMessage(content=json.dumps(ui_event))
+        messages = state.get("messages", [])
+        messages.append(card_message)
+
+        card_state = state.get("card_component", [])
+        card_state.append(dict_response)
+
+        return {
+          "card_component": card_state,
+          "current_agent": "component_supervisor",
+          "messages": messages,
+          "card_ready": True,
+        }
+
+      # Handle empty response
       card_state = state.get("card_component", [])
       card_state.append(dict_response)
-
       return {"card_component": card_state, "current_agent": "component_supervisor"}
     except Exception as e:
       print(f"An error occurred while generating card component: {e}")

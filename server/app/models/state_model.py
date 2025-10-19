@@ -17,6 +17,9 @@ class MultiAgentState(TypedDict):
   ui_descriptor_target: str
   is_initial_planning: bool
   iteration_count: int
+  section_ready: NotRequired[bool]
+  card_ready: NotRequired[bool]
+  table_ready: NotRequired[bool]
   messages: Annotated[Sequence[AnyMessage], operator.add]
 
 

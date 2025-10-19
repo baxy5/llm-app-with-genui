@@ -175,10 +175,19 @@ class MultiAgentOrchestratorService:
       "is_initial_planning": True,
       "ui_descriptor": {},
       "ui_descriptor_target": None,
+      "section_ready": False,
+      "card_ready": False,
+      "table_ready": False,
       "messages": [HumanMessage(content=req.input)],
     }
 
     events = self.graph.astream_events(initial_state, version="v2", config=config)
+
+    # Component counters for unique IDs
+    component_counters = {"section": 0, "card": 0, "table": 0}
+
+    # Track components for database saving
+    collected_components = []
 
     final_response: str | dict = ""
     async for event in events:
@@ -202,12 +211,70 @@ class MultiAgentOrchestratorService:
           yield 'data: {"type": "progress", "content": "Generating bar chart", "icon": "bar_chart"}\n\n'
         elif event_name == "section_agent":
           yield 'data: {"type": "progress", "content": "Building Section UI component", "icon": "blocks"}\n\n'
+          component_counters["section"] += 1
+          unique_target = f"section_component_{component_counters['section']}"
+          ui_data = {
+            "type": "ui_event",
+            "target": unique_target,
+            "component": {
+              "id": unique_target,
+              "type": "section",
+              "props": {
+                "title": "",
+                "subtitle": "",
+                "loading": True,
+                "children": [],
+              },
+            },
+          }
+          payload = {"type": "content", "component": [ui_data]}
+          yield f"data: {json.dumps(payload)}\n\n"
         elif event_name == "table_agent":
           yield 'data: {"type": "progress", "content": "Building Table UI component", "icon": "blocks"}\n\n'
+          # Send skeleton loader for table with unique ID
+          component_counters["table"] += 1
+          unique_target = f"table_component_{component_counters['table']}"
+          ui_data = {
+            "type": "ui_event",
+            "target": unique_target,
+            "component": {
+              "id": unique_target,
+              "type": "table",
+              "props": {
+                "title": "",
+                "loading": True,
+                "columns": [],
+                "rows": [],
+              },
+            },
+          }
+          payload = {"type": "content", "component": [ui_data]}
+          yield f"data: {json.dumps(payload)}\n\n"
         elif event_name == "card_agent":
           yield 'data: {"type": "progress", "content": "Building Card UI component", "icon": "blocks"}\n\n'
-        elif event_name == "ui_builder_agent":
-          yield 'data: {"type": "progress", "content": "Building final dashboard UI", "icon": "hammer"}\n\n'
+          # Send skeleton loader for card with unique ID
+          component_counters["card"] += 1
+          unique_target = f"card_component_{component_counters['card']}"
+          ui_data = {
+            "type": "ui_event",
+            "target": unique_target,
+            "component": {
+              "id": unique_target,
+              "type": "card",
+              "props": {
+                "title": "",
+                "value": "",
+                "loading": True,
+                "size": "md",
+                "bordered": True,
+                "shadow": True,
+                "rounded": True,
+                "children": [],
+              },
+            },
+          }
+          payload = {"type": "content", "component": [ui_data]}
+          yield f"data: {json.dumps(payload)}\n\n"
 
       # Handle agent completion events
       if event_type == "on_chain_end":
@@ -218,77 +285,68 @@ class MultiAgentOrchestratorService:
         elif event_name == "chat_agent":
           yield 'data: {"type": "progress", "content": "Response completed", "icon": "check"}\n\n'
         elif event_name == "component_supervisor_agent":
+          pass
+        elif event_name == "section_agent":
           event_data = event.get("data", {})
           output = event_data.get("output", {})
-          next_agent = output.get("current_agent", "")
-          is_initial_planning = output.get("is_initial_planning", False)
-          target = output.get("ui_descriptor_target", "component-123")
 
-          if is_initial_planning and next_agent != "END":
-            if next_agent == "section":
-              ui_data = {
-                "type": "ui_event",
-                "target": target,
-                "component": {
-                  "id": "",
-                  "type": "section",
-                  "props": {
-                    "loading": True,
-                    "children": [],
-                  },
-                },
-              }
-              payload = {"type": "content", "component": [ui_data]}
-              yield f"data: {json.dumps(payload)}\n\n"
-            if next_agent == "card":
-              ui_data = {
-                "type": "ui_event",
-                "target": target,
-                "component": {
-                  "id": "",
-                  "type": "card",
-                  "props": {
-                    "title": "",
-                    "description": "",
-                    "value": "",
-                    "loading": True,
-                    "children": [],
-                  },
-                },
-              }
-              payload = {"type": "content", "component": [ui_data]}
-              yield f"data: {json.dumps(payload)}\n\n"
-            if next_agent == "table":
-              ui_data = {
-                "type": "ui_event",
-                "target": target,
-                "component": {
-                  "id": "",
-                  "type": "table",
-                  "props": {
-                    "loading": True,
-                    "children": [],
-                  },
-                },
-              }
-              payload = {"type": "content", "component": [ui_data]}
-              yield f"data: {json.dumps(payload)}\n\n"
-        elif event_name == "section_agent":
+          if output.get("section_ready") and output.get("messages"):
+            section_ui_event = json.loads(output["messages"][-1].content)
+            target_id = f"section_component_{component_counters['section']}"
+            section_ui_event["target"] = target_id
+            payload = {"type": "content", "component": [section_ui_event]}
+            yield f"data: {json.dumps(payload)}\n\n"
+
+            # Collect component for database saving
+            collected_components.append(section_ui_event)
+
           yield 'data: {"type": "progress", "content": "Section UI component crafted", "icon": "check"}\n\n'
         elif event_name == "table_agent":
-          yield 'data: {"type": "progress", "content": "Table UI component crafted", "icon": "check"}\n\n'
-        elif event_name == "card_agent":
-          yield 'data: {"type": "progress", "content": "Card UI component crafted", "icon": "check"}\n\n'
-        # Dashboard final response
-        elif event_name == "ui_builder_agent":
           event_data = event.get("data", {})
           output = event_data.get("output", {})
-          if output and "messages" in output and output["messages"]:
-            ui_data = json.loads(output["messages"][0].content)
-            final_response = [ui_data]
-            payload = {"type": "content", "component": [ui_data]}
+
+          # Handle progressive component delivery - replace skeleton loader
+          if output.get("table_ready") and output.get("messages"):
+            # Send the actual table descriptor with target matching current table counter
+            table_ui_event = json.loads(output["messages"][-1].content)
+            # Use the current table counter to determine target
+            target_id = f"table_component_{component_counters['table']}"
+            table_ui_event["target"] = target_id
+            payload = {"type": "content", "component": [table_ui_event]}
             yield f"data: {json.dumps(payload)}\n\n"
-          yield 'data: {"type": "progress", "content": "Components crafted, dashboard assembled", "icon": "check"}\n\n'
+
+            # Collect component for database saving
+            collected_components.append(table_ui_event)
+
+          yield 'data: {"type": "progress", "content": "Table UI component crafted", "icon": "check"}\n\n'
+        elif event_name == "card_agent":
+          event_data = event.get("data", {})
+          output = event_data.get("output", {})
+
+          # Handle progressive component delivery - replace skeleton loader
+          if output.get("card_ready") and output.get("messages"):
+            # Send the actual card descriptor with target matching current card counter
+            card_ui_event = json.loads(output["messages"][-1].content)
+            # Use the current card counter to determine target
+            target_id = f"card_component_{component_counters['card']}"
+            card_ui_event["target"] = target_id
+            payload = {"type": "content", "component": [card_ui_event]}
+            yield f"data: {json.dumps(payload)}\n\n"
+
+            # Collect component for database saving
+            collected_components.append(card_ui_event)
+
+          yield 'data: {"type": "progress", "content": "Card UI component crafted", "icon": "check"}\n\n'
+        elif event_name == "ui_builder_agent":
+          # UI builder is no longer needed since components are sent progressively
+          # But we can still use it to mark completion of the component assembly process
+          event_data = event.get("data", {})
+          output = event_data.get("output", {})
+          if output and "messages" in output and output["messages"] and not collected_components:
+            # Fallback: if no progressive components were collected, use UI builder result
+            ui_data = json.loads(output["messages"][0].content)
+            collected_components.append(ui_data)
+          yield 'data: {"type": "progress", "content": "Component(s) crafted, dashboard assembled", "icon": "check"}\n\n'
         # Line Chart final response
         elif event_name == "line_chart_agent":
           event_data = event.get("data", {})
@@ -361,17 +419,29 @@ class MultiAgentOrchestratorService:
           yield f"data: {json.dumps(payload)}\n\n"
 
     # Store agent response to db
-    if isinstance(final_response, str):
+    if collected_components:
+      # progressive components
+      await self.cs_service.add_assistant_message(
+        session_id=req.session_id, component=collected_components, content=None, option=None
+      )
+    elif isinstance(final_response, str) and final_response.strip():
+      # text basde
       await self.cs_service.add_assistant_message(
         session_id=req.session_id, content=final_response, option=None, component=None
       )
     elif isinstance(final_response, list):
+      # If we have a list response (shouldn't happen with new flow)
       await self.cs_service.add_assistant_message(
         session_id=req.session_id, component=final_response, content=None, option=None
       )
-    else:
+    elif final_response and not isinstance(final_response, str):
+      # chart
       await self.cs_service.add_assistant_message(
         session_id=req.session_id, content=None, option=final_response, component=None
+      )
+    else:
+      await self.cs_service.add_assistant_message(
+        session_id=req.session_id, content="", option=None, component=None
       )
 
     yield 'data: {"type": "end"}\n\n'

@@ -226,15 +226,59 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
             // Handle component data
             if (parsed.component) {
               setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === aiResponseId
-                    ? {
-                        ...msg,
-                        type: "assistant",
-                        component: parsed.component,
+                prev.map((msg) => {
+                  if (msg.id === aiResponseId) {
+                    const existingComponents = msg.component || [];
+                    let hasChanges = false;
+                    let mergedComponents = existingComponents;
+
+                    parsed.component.forEach((newComp: any) => {
+                      if (
+                        newComp.type === "ui_event" &&
+                        newComp.target &&
+                        newComp.component
+                      ) {
+                        const existingIndex = existingComponents.findIndex(
+                          (existing: any) =>
+                            existing.type === "ui_event" &&
+                            existing.target === newComp.target
+                        );
+
+                        if (existingIndex >= 0) {
+                          if (
+                            JSON.stringify(
+                              existingComponents[existingIndex].component
+                            ) !== JSON.stringify(newComp.component)
+                          ) {
+                            if (!hasChanges) {
+                              mergedComponents = [...existingComponents];
+                              hasChanges = true;
+                            }
+                            mergedComponents[existingIndex] = newComp;
+                          }
+                        } else {
+                          if (!hasChanges) {
+                            mergedComponents = [...existingComponents];
+                            hasChanges = true;
+                          }
+                          mergedComponents.push(newComp);
+                        }
+                      } else {
+                        if (!hasChanges) {
+                          mergedComponents = [...existingComponents];
+                          hasChanges = true;
+                        }
+                        mergedComponents.push(newComp);
                       }
-                    : msg
-                )
+                    });
+
+                    if (hasChanges) {
+                      return { ...msg, component: mergedComponents };
+                    }
+                    return msg;
+                  }
+                  return msg;
+                })
               );
             }
           } else {
