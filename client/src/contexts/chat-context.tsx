@@ -82,11 +82,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   const fetchChatSessions = async () => {
     try {
       const data: IChatSessionsResponse[] = await getChatSessions();
-      const sorted = [...data].sort(
-        (a, b) => Number(b.session_id) - Number(a.session_id)
-      );
 
-      setChatSessions(sorted);
+      setChatSessions(data);
     } catch (error) {
       console.error("Error fetching chat sessions:", error);
     }

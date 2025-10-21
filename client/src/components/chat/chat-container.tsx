@@ -54,8 +54,7 @@ const ChatContainer = ({
 
   useEffect(() => {
     if (mess) {
-      const sortedMessages = [...mess].sort((a, b) => a.id - b.id);
-      setMessages(sortedMessages);
+      setMessages(mess);
     }
   }, [mess, setMessages]);
 
@@ -104,11 +103,23 @@ const ChatContainer = ({
         <Conversation className="flex-1 min-h-0">
           <ConversationContent className="space-y-6">
             {messages.map((message, i) => (
-              <Message
-                key={i}
-                from={message.type as "user" | "assistant" | "system"}
-              >
+              <Message key={i} from={message.type as "user" | "assistant"}>
                 <MessageContent>
+                  {isLoading &&
+                    message.type === "assistant" &&
+                    !message.content &&
+                    !message.component && (
+                      <div
+                        className="flex items-center gap-1"
+                        aria-live="polite"
+                        aria-busy="true"
+                      >
+                        <span className="animate-bounce [animation-delay:0ms] h-2 w-2 rounded-full bg-[#0a0a0a]" />
+                        <span className="animate-bounce [animation-delay:200ms] h-2 w-2 rounded-full bg-[#0a0a0a]" />
+                        <span className="animate-bounce [animation-delay:400ms] h-2 w-2 rounded-full bg-[#0a0a0a]" />
+                        <span className="sr-only">Assistant is typing...</span>
+                      </div>
+                    )}
                   {(() => {
                     if (message.type === "assistant") {
                       if (message.component) {

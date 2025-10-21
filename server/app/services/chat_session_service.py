@@ -20,7 +20,10 @@ class ChatSessionService:
     try:
       stmt = select(ChatSession)
       response = self.session.scalars(stmt).all()
-      return response
+
+      sorted_by_session_id = sorted(response, key=lambda chat: chat.session_id, reverse=True)
+
+      return sorted_by_session_id
     except Exception as e:
       raise HTTPException(
         status_code=500, detail=f"Couldn't retrieve chat sessions from database, {e}"
@@ -34,7 +37,9 @@ class ChatSessionService:
       if not chat_session:
         raise HTTPException(status_code=404, detail=f"Chat session with id {session_id} not found.")
 
-      return chat_session.messages
+      sorted_by_id = sorted(chat_session.messages, key=lambda message: message.id)
+
+      return sorted_by_id
     except Exception as e:
       raise HTTPException(
         status_code=500, detail=f"Couldn't retrieve messages for session {session_id}: {e}"
@@ -100,7 +105,12 @@ class ChatSessionService:
       self.session.add(new_message)
       self.session.commit()
       self.session.refresh(new_message)  # refresh to get autoincrement ID
-      return {"session_id": session_id, "content": content, "option": option, "component": component}
+      return {
+        "session_id": session_id,
+        "content": content,
+        "option": option,
+        "component": component,
+      }
     except Exception as e:
       self.session.rollback()
       raise HTTPException(status_code=500, detail=f"New assistant message insertion failed: {e}")
