@@ -294,6 +294,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         console.error("Error parsing event data:", err);
       } finally {
         setIsLoading(false);
+        // Refresh sessions after message is sent to update the sidebar
+        await fetchChatSessions();
       }
     }
   };
