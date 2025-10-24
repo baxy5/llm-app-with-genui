@@ -179,9 +179,9 @@ const ChatContainer = ({
                   {mounted && (
                     <>
                       <PromptInputActionMenu>
-                        <PromptInputActionMenuTrigger />
+                        <PromptInputActionMenuTrigger className="cursor-pointer" />
                         <PromptInputActionMenuContent>
-                          <PromptInputActionAddAttachments />
+                          <PromptInputActionAddAttachments className="cursor-pointer" />
                         </PromptInputActionMenuContent>
                       </PromptInputActionMenu>
                     </>

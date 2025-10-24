@@ -1,12 +1,7 @@
 "use client";
+import { useChat } from "@/contexts/chat-context";
+import { useSidebar } from "@/contexts/sidebar-context";
 import { cn } from "@/lib/utils";
-import React from "react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./ui/collapsible";
-import { Button } from "./ui/button";
 import { XIcon } from "lucide-react";
 import {
   ChainOfThought,
@@ -16,8 +11,12 @@ import {
   ChainOfThoughtSearchResults,
   ChainOfThoughtStep,
 } from "./ai-elements/chain-of-thought";
-import { useSidebar } from "@/contexts/sidebar-context";
-import { useChat } from "@/contexts/chat-context";
+import { Button } from "./ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
 
 const RightSidebar = () => {
   const { rightSidebarOpen, setRightSidebarOpen } = useSidebar();
@@ -56,7 +55,7 @@ const RightSidebar = () => {
               {cot.length > 0 && (
                 <div className="p-3 rounded-lg bg-secondary/50 border border-border/50 text-sm">
                   <ChainOfThought defaultOpen>
-                    <ChainOfThoughtHeader className="font-semibold text-xl">
+                    <ChainOfThoughtHeader className="font-semibold text-xl cursor-pointer">
                       Agent workflow
                     </ChainOfThoughtHeader>
                     <ChainOfThoughtContent>
