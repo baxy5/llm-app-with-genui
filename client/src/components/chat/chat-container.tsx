@@ -108,7 +108,8 @@ const ChatContainer = ({
                   {isLoading &&
                     message.type === "assistant" &&
                     !message.content &&
-                    !message.component && (
+                    !message.component &&
+                    !message.option && (
                       <div
                         className="flex items-center gap-1"
                         aria-live="polite"
