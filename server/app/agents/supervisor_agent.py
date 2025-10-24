@@ -1,8 +1,12 @@
+import logging
+
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
 from app.services.env_config_service import EnvConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class SupervisorAgent:
@@ -70,8 +74,8 @@ class SupervisorAgent:
 
     next_agent = response.content.strip().lower()
 
-    print(f"SUPERVISOR: {next_agent}")
-    print(f"ITERATION: {state.get('iteration_count', 0)}")
+    logger.debug(f"Supervisor decision: {next_agent}")
+    logger.debug(f"Iterations: {state.get('iteration_count', 0)}")
 
     if state.get("iteration_count", 0) > 5:
       next_agent = "END"

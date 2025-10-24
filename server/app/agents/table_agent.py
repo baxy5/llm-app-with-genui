@@ -1,10 +1,13 @@
 import json
+import logging
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
 from app.services.env_config_service import EnvConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class TableAgent:
@@ -115,6 +118,7 @@ class TableAgent:
     message = [system_message, human_message]
 
     try:
+      logger.debug("Generating table response.")
       response = await self.llm_with_structured_output.ainvoke(message)
 
       dict_response = response if isinstance(response, (dict, list)) else json.loads(response)
@@ -141,5 +145,5 @@ class TableAgent:
       table_state.append(dict_response)
       return {"table_component": table_state, "current_agent": "component_supervisor"}
     except Exception as e:
-      print(f"An error occurred while generating table component: {e}")
+      logger.error(f"Failed to generate table response: {e}")
       return {"current_agent": "component_supervisor"}

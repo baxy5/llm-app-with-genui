@@ -1,8 +1,12 @@
+import logging
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
 from app.services.env_config_service import EnvConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class SummaryAgent:
@@ -37,7 +41,7 @@ class SummaryAgent:
         "- Avoid speculation - only use information present in the specified data\n"
         "- If requested file type is not available, clearly state this limitation\n"
         "- Start your response by confirming which file(s) you're analyzing"
-        "- If no relevant information is found: briefly say \"I couldn’t find relevant information in the provided files.\""
+        '- If no relevant information is found: briefly say "I couldn’t find relevant information in the provided files."'
       )
     )
 
@@ -50,6 +54,7 @@ class SummaryAgent:
     summary_messages = [system_prompt, user_message, research_message, attachment_contents_message]
 
     try:
+      logger.debug("Generating summary response.")
       response = await self.llm.ainvoke(summary_messages)
 
       return {
@@ -57,5 +62,6 @@ class SummaryAgent:
         "current_agent": "END",
       }
     except Exception as e:
+      logger.error(f"Failed to generate summary response: {e}")
       error_msg = f"Summary agent error: {str(e)}"
       return {"summary_data": error_msg, "current_agent": "END"}

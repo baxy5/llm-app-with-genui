@@ -1,3 +1,5 @@
+import logging
+
 from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
@@ -5,6 +7,8 @@ from langchain_tavily import TavilySearch
 
 from app.models.state_model import MultiAgentState
 from app.services.env_config_service import EnvConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class ResearchAgent:
@@ -25,6 +29,7 @@ class ResearchAgent:
         result = tool.invoke(input)
         return result["results"][0]["content"]
       except Exception as e:
+        logger.error(f"Failed to generato tool call: {e}")
         return f"Search error: {str(e)}"
 
     return tavily_search_tool
@@ -68,12 +73,14 @@ class ResearchAgent:
     research_messages = [system_message] + [state["messages"][-1]]
 
     try:
+      logger.debug("Generating research response.")
       response = await client_with_tools.ainvoke(research_messages)
       research_messages.append(response)
 
       # Handle tool calls if present
       final_research_response = ""
       if response.tool_calls:
+        logger.debug("Tools were called.")
         for tool_call in response.tool_calls:
           if tool_call["name"] in tool_map:
             tool = tool_map[tool_call["name"]]
@@ -87,11 +94,13 @@ class ResearchAgent:
         final_response = await client_with_tools.ainvoke(research_messages)
         final_research_response = final_response.content
       else:
+        logger.debug("No tools were called.")
         # No tools were called, use the initial response
         final_research_response = response.content
 
       return {"research_data": final_research_response, "current_agent": "supervisor"}
 
     except Exception as e:
+      logger.error(f"Failed to generate research response: {e}")
       error_msg = f"Research agent error: {str(e)}"
       return {"research_data": error_msg, "current_agent": "supervisor"}

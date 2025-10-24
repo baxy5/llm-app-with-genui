@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from typing import List
@@ -18,6 +19,8 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.chat_session import FileRecord
 
+logger = logging.getLogger(__name__)
+
 
 class FileService:
   def __init__(self, db: Session):
@@ -27,7 +30,10 @@ class FileService:
     try:
       for file in files:
         if not file.filename:
+          logger.error("File with filename not found.")
           continue
+
+        logger.info(f"Saving file with filename: {file.filename}")
 
         content = await file.read()
         file_hash = hashlib.md5(content).hexdigest()
@@ -39,6 +45,9 @@ class FileService:
         )
 
         if existing_file:
+          logger.error(
+            f"File with filename {file.filename} have been already added to this session {session_id}."
+          )
           continue
 
         extracted_text = await self._extract_text(content, file.content_type, file.filename)
@@ -56,6 +65,7 @@ class FileService:
       self.session.commit()
       return True
     except Exception as e:
+      logger.error(f"Couldn't save file(s): {e}")
       self.session.rollback()
       raise HTTPException(status_code=500, detail=f"Error while saving files to db: {e}")
 
@@ -65,6 +75,7 @@ class FileService:
       files = self.session.scalars(stmt).all()
 
       if not files:
+        logger.warning(f"File(s) have not been found with session id {session_id}")
         return None
 
       content = ""
@@ -76,6 +87,7 @@ class FileService:
 
       return content
     except Exception as e:
+      logger.error(f"Couldn't retrieve content from database by session id {session_id}: {e}")
       raise HTTPException(
         status_code=500,
         detail=f"Couldn't retrieve content from db by session_id:{session_id}, {e}",
@@ -83,6 +95,7 @@ class FileService:
 
   async def _extract_text(self, content: bytes, content_type: str, filename: str = None):
     if not content_type:
+      logger.error("File doesn't have content type.")
       return None
 
     try:
@@ -111,6 +124,7 @@ class FileService:
         ]:
           loader = Docx2txtLoader(temp_file_path)
         else:
+          logger.error("File has an unsupported type.")
           raise HTTPException(status_code=400, detail=f"Unsupported file type: {content_type}")
 
         # Load and extract text
@@ -126,7 +140,7 @@ class FileService:
         os.unlink(temp_file_path)
 
     except Exception as e:
-      print(f"Failed to extract content: {e}")
+      logger.error(f"Failed to extract content from file: {e}")
       raise HTTPException(status_code=500, detail=f"Failed to extract content from file: {e}")
 
   def _get_file_extension(self, content_type: str, filename: str = None) -> str:

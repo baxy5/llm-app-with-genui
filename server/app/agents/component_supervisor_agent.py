@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -6,6 +7,8 @@ from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
 from app.services.env_config_service import EnvConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class ComponentSupervisorAgent:
@@ -132,6 +135,7 @@ class ComponentSupervisorAgent:
     message = [system_message] + [human_message]
 
     try:
+      logger.debug("Generating component supervisor response.")
       response = await self.llm_with_structured_output.ainvoke(message)
 
       dict_response = response if isinstance(response, dict) else json.loads(response)
@@ -147,10 +151,7 @@ class ComponentSupervisorAgent:
       dashboard_plan = {"dashboard_plan": plan, "todo": todo}
       next_agent = dict_response["next_agent"]
 
-      print("\n\n" + "-" * 40)
-      print("COMPONENT SUPERVISOR NEXT AGENT:")
-      print(next_agent)
-      print("-" * 40)
+      logger.debug(f"Component supervisor agent decision: {next_agent}")
 
       if state.get("iteration_count", 0) > 5:
         next_agent = "END"
@@ -167,5 +168,5 @@ class ComponentSupervisorAgent:
         "ui_descriptor_target": ui_descriptor_target,
       }
     except Exception as e:
-      print(f"An error occurred while generating dashboard plan in Component Supervisor Agent: {e}")
+      logger.error(f"Failed to generate component supervisor response: {e}")
       return {"current_agent": "END"}

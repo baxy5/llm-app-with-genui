@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from typing import Annotated
 
@@ -24,6 +25,8 @@ from app.models.state_model import MultiAgentRequest, MultiAgentState
 from app.services.chat_session_service import ChatSessionService
 from app.services.env_config_service import EnvConfigService, get_env_configs
 from app.services.file_service import FileService, get_file_service_db_session
+
+logger = logging.getLogger(__name__)
 
 
 def get_checkpointer(req: Request) -> BaseCheckpointSaver:
@@ -145,6 +148,9 @@ class MultiAgentOrchestratorService:
     if isinstance(chunk, AIMessageChunk):
       return chunk.content
     else:
+      logger.error(
+        f"Object of type {type(chunk).__name__} is not correctly formatted for serialisation"
+      )
       raise TypeError(
         f"Object of type {type(chunk).__name__} is not correctly formatted for serialisation"
       )

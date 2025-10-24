@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,6 +9,14 @@ from app.api.endpoints import chat_sessions, multi_agent
 from app.models.chat_session import ChatSession, FileRecord, Message  # noqa: F401
 from app.models.test_dataset import Dataset  # noqa: F401
 from app.services.env_config_service import get_env_configs
+
+logging.basicConfig(
+  level=logging.INFO,
+  format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+  handlers=[
+    logging.StreamHandler(),
+  ],
+)
 
 
 @asynccontextmanager

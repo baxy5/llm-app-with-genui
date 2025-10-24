@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from fastapi import HTTPException
@@ -6,6 +7,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models.chat_session import ChatSession, Message
+
+logger = logging.getLogger(__name__)
 
 
 class ChatSessionService:
@@ -21,10 +24,13 @@ class ChatSessionService:
       stmt = select(ChatSession)
       response = self.session.scalars(stmt).all()
 
+      logger.info(f"get_chat_session successfully returned {len(response)} chat sessions.")
+
       sorted_by_session_id = sorted(response, key=lambda chat: chat.session_id, reverse=True)
 
       return sorted_by_session_id
     except Exception as e:
+      logger.error(f"Couldn't retrieve chat sessions from database: {e}")
       raise HTTPException(
         status_code=500, detail=f"Couldn't retrieve chat sessions from database, {e}"
       )
@@ -35,12 +41,14 @@ class ChatSessionService:
       chat_session = self.session.scalars(stmt).first()
 
       if not chat_session:
+        logger.error(f"Chat session with id {session_id} not found.")
         raise HTTPException(status_code=404, detail=f"Chat session with id {session_id} not found.")
 
       sorted_by_id = sorted(chat_session.messages, key=lambda message: message.id)
 
       return sorted_by_id
     except Exception as e:
+      logger.error(f"Couldn't retrieve messages for session_id {session_id}: {e}")
       raise HTTPException(
         status_code=500, detail=f"Couldn't retrieve messages for session {session_id}: {e}"
       )
@@ -55,9 +63,14 @@ class ChatSessionService:
         self.session.refresh(new_chat_session)  # refresh to get autoincrement ID
         return {"session_id": session_id, "title": title}
       else:
-        raise HTTPException(status_code=400, detail="session_id and title are required")
+        logger.error("Couldn't add chat session because either session_id or title are missing.")
+        raise HTTPException(
+          status_code=400,
+          detail="Couldn't add chat session because either session_id or title are missing.",
+        )
     except Exception as e:
       self.session.rollback()
+      logger.error(f"Couldn't add new chat session: {e}")
       raise HTTPException(status_code=500, detail=f"New chat session insertion failed: {e}")
 
   async def add_user_message(self, session_id: str, content: str):
@@ -85,6 +98,7 @@ class ChatSessionService:
       return {"session_id": session_id, "content": content}
     except Exception as e:
       self.session.rollback()
+      logger.error(f"Couldn't add new user message: {e}")
       raise HTTPException(status_code=500, detail=f"New user message insertion failed: {e}")
 
   async def add_assistant_message(
@@ -113,6 +127,7 @@ class ChatSessionService:
       }
     except Exception as e:
       self.session.rollback()
+      logger.error(f"Couldn't add new assistant message: {e}")
       raise HTTPException(status_code=500, detail=f"New assistant message insertion failed: {e}")
 
   async def delete_chat_session(self, session_id: str):
@@ -124,8 +139,13 @@ class ChatSessionService:
         await self.checkpointer.adelete_thread(session_id)
         self.session.delete(chat_session)
         self.session.commit()
+      else:
+        logger.error(
+          f"Chat session have not been found with id {session_id} when deleting chat session."
+        )
     except Exception as e:
       self.session.rollback()
+      logger.error(f"Couldn't delete chat session: {e}")
       raise HTTPException(status_code=500, detail=f"Session deletion failed: {e}")
 
   async def reset_db(self):

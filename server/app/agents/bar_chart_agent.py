@@ -1,4 +1,5 @@
 import json
+import logging
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -6,6 +7,8 @@ from langchain_openai import ChatOpenAI
 from app.models.bar_chart_model import ChartConfig
 from app.models.state_model import MultiAgentState
 from app.services.env_config_service import EnvConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class BarChartAgent:
@@ -111,6 +114,7 @@ class BarChartAgent:
     ]
 
     try:
+      logger.debug("Generating bar chart response.")
       response = await self.llm_with_structured_output.ainvoke(bar_chart_messages)
 
       try:
@@ -122,8 +126,8 @@ class BarChartAgent:
 
         return {"messages": [chart_message], "current_agent": "END"}
       except Exception as e:
-        print(f"Model validation failed. {e}")
+        logger.error(f"Bar chart model validation failed: {e}")
         return {"messages": [], "current_agent": "END"}
     except Exception as e:
-      print(f"Line chart generation failed. {e}")
+      logger.error(f"Bar chart generation failed: {e}")
       return {"messages": [], "current_agent": "END"}

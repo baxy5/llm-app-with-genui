@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,6 +11,8 @@ from app.services.multi_agent_orchestrator_service import (
   MultiAgentOrchestratorService,
   get_db_session,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -34,6 +37,7 @@ async def multi_agent_generate(
     data = {key: value for key, value in form.items() if not hasattr(value, "filename")}
     files = [file for key, file in form.multi_items() if hasattr(file, "filename")]
   else:
+    logger.error("Failed to generate response, unsupported content type.")
     return JSONResponse({"error": "Unsupported content type"}, status_code=400)
 
   try:
@@ -47,8 +51,10 @@ async def multi_agent_generate(
       if files:
         await file_service.save_files(files=files, session_id=user_request.session_id)
     except Exception as e:
+      logger.error(f"ENDPOINT: multi-agent -> Saving files in database failed: {e}")
       raise HTTPException(status_code=500, detail=f"Multi agent saving files in db failed: {e}")
 
     return StreamingResponse(service.generate(user_request), media_type="text/event-stream")
   except Exception as e:
+    logger.error(f"ENDPOINT: multi-agent -> Generating response failed: {e}")
     raise HTTPException(status_code=500, detail=f"Multi agent generation have failed, {e}")

@@ -1,8 +1,12 @@
+import logging
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.models.state_model import MultiAgentState
 from app.services.env_config_service import EnvConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class ChatAgent:
@@ -53,8 +57,10 @@ class ChatAgent:
       messages = messages + [research_message]
 
     try:
+      logger.debug("Generating chat response.")
       response = await self.llm.ainvoke(messages)
 
       return {"messages": [response], "current_agent": "END"}
-    except Exception:
+    except Exception as e:
+      logger.error(f"Failed to generate chat response: {e}")
       return {"messages": [], "current_agent": "END"}
