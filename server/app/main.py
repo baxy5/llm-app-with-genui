@@ -47,3 +47,8 @@ app.add_middleware(
 
 app.include_router(multi_agent.router, prefix="/agent", tags=["Multi Agent"])
 app.include_router(chat_sessions.router, prefix="/chat_sessions", tags=["Chat Sessions"])
+
+
+@app.get("/health")
+async def health_check():
+  return {"status": "ok"}

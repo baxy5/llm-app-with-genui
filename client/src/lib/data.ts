@@ -36,3 +36,11 @@ export async function deleteChatSessionById(session_id: string) {
 
   return data;
 }
+
+export async function isServerOnline() {
+  const data = await fetch("http://localhost:3000/api/health");
+
+  const res = await data.json();
+
+  return res.online;
+}
