@@ -5,12 +5,7 @@ export default async function Home() {
   const isOnline = await isServerOnline();
 
   if (!isOnline) {
-    return (
-      <div>
-        <h2>Server offline</h2>
-        <p>The backend is currently unavailable. Please try again later.</p>
-      </div>
-    );
+    throw new Error("Server is unavailable.");
   }
 
   const sessionId = await getLatestSessionId();
