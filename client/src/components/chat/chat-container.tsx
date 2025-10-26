@@ -50,6 +50,7 @@ const ChatContainer = ({
     isLoading,
     handleSubmit,
     setSessionId,
+    sessionId,
   } = useChat();
 
   useEffect(() => {
@@ -111,14 +112,13 @@ const ChatContainer = ({
                     !message.component &&
                     !message.option && (
                       <div
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 h-6"
                         aria-live="polite"
                         aria-busy="true"
                       >
                         <span className="animate-bounce [animation-delay:0ms] h-2 w-2 rounded-full bg-[#0a0a0a]" />
                         <span className="animate-bounce [animation-delay:200ms] h-2 w-2 rounded-full bg-[#0a0a0a]" />
                         <span className="animate-bounce [animation-delay:400ms] h-2 w-2 rounded-full bg-[#0a0a0a]" />
-                        <span className="sr-only">Assistant is typing...</span>
                       </div>
                     )}
                   {(() => {
@@ -163,7 +163,7 @@ const ChatContainer = ({
 
         {/* Input Area */}
         <div className="p-4 border-t border-border bg-background">
-          <PromptInput onSubmit={handleSubmit}>
+          <PromptInput key={sessionId} onSubmit={handleSubmit}>
             <PromptInputBody>
               <PromptInputAttachments>
                 {(attachment) => <PromptInputAttachment data={attachment} />}

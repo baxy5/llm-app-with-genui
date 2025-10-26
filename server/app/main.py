@@ -18,6 +18,10 @@ logging.basicConfig(
   ],
 )
 
+# SQLAlchemy pool logging
+logging.getLogger("sqlalchemy.pool").setLevel(logging.DEBUG)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):

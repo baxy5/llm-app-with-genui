@@ -1,4 +1,5 @@
 import ChatContainer from "@/components/chat/chat-container";
+import Layout from "@/components/layout";
 import { getLatestSessionId, isServerOnline } from "@/lib/data";
 
 export default async function Home() {
@@ -12,7 +13,9 @@ export default async function Home() {
 
   return (
     <>
-      <ChatContainer mess={[]} slug={sessionId?.toString()} />
+      <Layout>
+        <ChatContainer mess={[]} slug={sessionId?.toString()} />
+      </Layout>
     </>
   );
 }

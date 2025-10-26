@@ -1,6 +1,3 @@
-import AppContainer from "@/components/app-container";
-import LeftSideBar from "@/components/left-sidebar";
-import RightSidebar from "@/components/right-sidebar";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -30,13 +27,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <main className="flex h-screen max-w-[1440px] m-auto bg-background overflow-hidden">
-          <AppContainer>
-            <LeftSideBar />
-            {children}
-            <RightSidebar />
-          </AppContainer>
-        </main>
+        {children}
       </body>
     </html>
   );

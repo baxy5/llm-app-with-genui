@@ -55,7 +55,7 @@ export const CardComponent: React.FC<CardProps> = ({
         <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
       </div>
 
-      <div className="h-2 w-full bg-gray-200 rounded">
+      <div className="h-2 w-[350px] bg-gray-200 rounded">
         <div className="h-2 w-1/2 bg-gray-300 rounded"></div>
       </div>
 
@@ -127,7 +127,7 @@ export const CardComponent: React.FC<CardProps> = ({
   return (
     <motion.div
       layout
-      className={`${roundedClass} ${borderClass} ${shadowClass} ${sizeClasses} bg-white p-5 flex flex-col justify-between ${
+      className={`${roundedClass} ${borderClass} ${shadowClass} ${sizeClasses} bg-white p-5 flex flex-col justify-between w-[400px] ${
         className ?? ""
       }`}
       initial={{ opacity: 0, y: 10 }}

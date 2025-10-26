@@ -103,7 +103,7 @@ export function PromptInputAttachment({
       )}
       <Button
         aria-label="Remove attachment"
-        className="-right-1.5 -top-1.5 absolute h-6 w-6 rounded-full opacity-0 group-hover:opacity-100"
+        className="-right-1.5 -top-1.5 absolute h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer"
         onClick={() => attachments.remove(data.id)}
         size="icon"
         type="button"
@@ -407,6 +407,7 @@ export const PromptInput = ({
     }));
 
     onSubmit({ text: event.currentTarget.message.value, files }, event);
+    clear();
   };
 
   const ctx = useMemo<AttachmentsContext>(
