@@ -26,6 +26,24 @@ class FileService:
   def __init__(self, db: Session):
     self.session = db
 
+  async def get_files_by_session_id(self, session_id: str):
+    try:
+      stmt = select(FileRecord).where(FileRecord.session_id == session_id)
+      files = self.session.scalars(stmt).all()
+
+      if not files:
+        logger.warning(f"No files found for session_id {session_id}.")
+        return []
+
+      filenames = [file.filename for file in files]
+
+      return filenames
+    except Exception as e:
+      logger.error(f"Failed to fetch files by session_id {session_id}: {e}")
+      raise HTTPException(
+        status_code=500, detail=f"Failed to fetch files by session_id {session_id}: {e}"
+      )
+
   async def save_files(self, files: List[UploadFile], session_id: int):
     try:
       for file in files:

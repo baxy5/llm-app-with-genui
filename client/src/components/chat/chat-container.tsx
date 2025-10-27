@@ -51,6 +51,7 @@ const ChatContainer = ({
     handleSubmit,
     setSessionId,
     sessionId,
+    files,
   } = useChat();
 
   useEffect(() => {
@@ -72,31 +73,70 @@ const ChatContainer = ({
   return (
     <div className="flex-1 flex flex-col min-w-0">
       {/* Header with sidebar toggles */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-background">
-        <div className="flex items-center gap-2">
+      <div className="p-4 border-b border-border bg-background">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              className="cursor-pointer"
+              variant="ghost"
+              size="sm"
+              aria-label="Toggle chat sessions panel"
+              onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+            >
+              <MenuIcon className="h-4 w-4" />
+              <span className="sr-only">Toggle chat sessions panel</span>
+            </Button>
+            <h1 className="text-xl font-semibold">AI Chat</h1>
+          </div>
+
           <Button
             className="cursor-pointer"
             variant="ghost"
             size="sm"
-            aria-label="Toggle chat sessions panel"
-            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+            aria-label="Toggle settings panel"
+            onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
           >
-            <MenuIcon className="h-4 w-4" />
-            <span className="sr-only">Toggle chat sessions panel</span>
+            <SidebarIcon className="h-4 w-4" />
+            <span className="sr-only">Toggle settings panel</span>
           </Button>
-          <h1 className="text-xl font-semibold">AI Chat</h1>
         </div>
 
-        <Button
-          className="cursor-pointer"
-          variant="ghost"
-          size="sm"
-          aria-label="Toggle settings panel"
-          onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-        >
-          <SidebarIcon className="h-4 w-4" />
-          <span className="sr-only">Toggle settings panel</span>
-        </Button>
+        <div className="pl-3 pt-4">
+          {files.length !== 0 && (
+            <div>
+              <div className="mb-2 text-sm font-medium text-muted-foreground">
+                Attachments
+              </div>
+
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {files.map((f, i) => {
+                  const name = typeof f === "string" ? f : String(f);
+                  const ext =
+                    typeof name === "string" && name.includes(".")
+                      ? name.split(".").pop()?.toUpperCase()
+                      : "FILE";
+
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 bg-background border border-border rounded-md px-3 py-2 min-w-[200px] max-w-sm"
+                    >
+                      <div className="w-10 h-10 rounded-md bg-muted/60 flex items-center justify-center text-xs font-semibold border border-border">
+                        {ext}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate">
+                          {name}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Chat Interface */}

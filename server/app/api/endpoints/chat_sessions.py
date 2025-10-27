@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.services.chat_session_service import ChatSessionService
+from app.services.file_service import FileService, get_file_service_db_session
 from app.services.multi_agent_orchestrator_service import get_db_session
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,21 @@ async def get_messages_by_sessions_id(
     logger.error(f"Couldn't retrieve messages for session id {session_id}: {e}")
     raise HTTPException(
       status_code=500, detail=f"Retriving messages for chat session id {session_id} has failed. {e}"
+    )
+
+
+@router.get("/files")
+async def get_files_by_session_id(
+  session_id: str, service: Annotated[FileService, Depends(get_file_service_db_session)]
+):
+  try:
+    files = await service.get_files_by_session_id(session_id=session_id)
+
+    return files
+  except Exception as e:
+    logger.error(f"Failed to fetch files for session_id {session_id}: {e}")
+    raise HTTPException(
+      status_code=500, detail=f"Failed to fetch files for session_id {session_id}: {e}"
     )
 
 

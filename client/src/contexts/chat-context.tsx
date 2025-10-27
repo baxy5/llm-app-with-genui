@@ -1,13 +1,14 @@
 "use client";
 
 import { PromptInputMessage } from "@/components/ai-elements/prompt-input";
-import { deleteChatSessionById, getChatSessions } from "@/lib/data";
+import { deleteChatSessionById, getChatSessions, getFiles } from "@/lib/data";
 import { createFormDataWithFiles, streamParser } from "@/lib/utils";
 import {
   IChatMessagesResponse,
   IChatSessionsResponse,
 } from "@/schemas/api-responses";
 import { IThinkingType } from "@/schemas/chat-types";
+import { FileUIPart } from "ai";
 import {
   Blocks,
   Brain,
@@ -38,6 +39,7 @@ interface ChatContextType {
   sessionId: string;
   isLoading: boolean;
   chatSessions: IChatSessionsResponse[];
+  files: string[];
 
   // Setters
   setMessages: Dispatch<SetStateAction<IChatMessagesResponse[]>>;
@@ -54,6 +56,7 @@ interface ChatContextType {
   ) => Promise<void>;
   fetchChatSessions: () => Promise<void>;
   deleteChatSession: (sessionId: string) => Promise<void>;
+  getFilesForSession: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -78,6 +81,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   const [sessionId, setSessionId] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [chatSessions, setChatSessions] = useState<IChatSessionsResponse[]>([]);
+  const [files, setFiles] = useState<string[]>([]);
 
   const fetchChatSessions = async () => {
     try {
@@ -101,8 +105,24 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     }
   };
 
+  const getFilesForSession = async () => {
+    try {
+      if (sessionId) {
+        const data: string[] = await getFiles(sessionId);
+
+        setFiles(data);
+      }
+    } catch (error) {
+      console.error("Error fetching files for session: ", error);
+    }
+  };
+
   useEffect(() => {
     fetchChatSessions();
+  }, [sessionId]);
+
+  useEffect(() => {
+    getFilesForSession();
   }, [sessionId]);
 
   const handleSubmit = async (
@@ -143,6 +163,11 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         let response: Response;
 
         if (message.files && message.files.length > 0) {
+          setFiles((prev) => [
+            ...prev,
+            ...message.files!.map((f: FileUIPart) => f.filename as string),
+          ]);
+
           const formData = await createFormDataWithFiles(
             userInput,
             sessionId,
@@ -308,6 +333,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     sessionId,
     isLoading,
     chatSessions,
+    files,
 
     // Setters
     setMessages,
@@ -321,6 +347,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     handleSubmit,
     fetchChatSessions,
     deleteChatSession,
+    getFilesForSession,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

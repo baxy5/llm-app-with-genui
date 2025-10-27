@@ -17,6 +17,19 @@ export async function getChatSessions() {
   return data.data || [];
 }
 
+export async function getFiles(sessionId: string) {
+  const res = await fetch(
+    `http://localhost:3000/api/chat/files?session_id=${sessionId}`,
+    {
+      method: "GET",
+    }
+  );
+
+  const data = await res.json();
+
+  return data.data || [];
+}
+
 export async function getLatestSessionId() {
   const res = await fetch("http://localhost:3000/api/chat/latest-session-id");
   const data = await res.json();
